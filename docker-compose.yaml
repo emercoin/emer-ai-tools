@@ -6,7 +6,7 @@ volumes:
 
 services:
   emc:
-    image: emercoin/core:0.8.3
+    image: emercoin/core:0.8.5
     container_name: emc
     volumes:
       - blockchain_data:/srv/emercoind
