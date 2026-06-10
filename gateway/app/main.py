@@ -237,3 +237,32 @@ async def read_nvs(name: str, rpc: EmercoinRPC = Depends(get_rpc)) -> dict:
         return await nvs.show_record(rpc, name)
     except RPCError as exc:
         raise HTTPException(status_code=404, detail=f"name not found: {exc.message}")
+
+
+# --- wallet (dev/admin) ----------------------------------------------------
+# The gateway hot-wallet pays for every NVS record, so agents need no coins.
+# These are unauthenticated dev endpoints for funding it; gate behind admin auth
+# before any public deployment.
+
+@app.get("/wallet/address")
+async def wallet_address(
+    label: str = "gateway", rpc: EmercoinRPC = Depends(get_rpc)
+) -> dict:
+    """Fresh receive address for funding the gateway hot-wallet with EMC."""
+    try:
+        address = await rpc.call("getnewaddress", label)
+    except RPCError as exc:
+        raise HTTPException(status_code=502, detail=f"node rpc error: {exc.message}")
+    return {"address": address, "label": label}
+
+
+@app.get("/wallet/balance")
+async def wallet_balance(rpc: EmercoinRPC = Depends(get_rpc)) -> dict:
+    """Hot-wallet balance — confirm funds arrived before testing NVS writes."""
+    try:
+        return {
+            "balance": await rpc.call("getbalance"),
+            "unconfirmed": await rpc.call("getunconfirmedbalance"),
+        }
+    except RPCError as exc:
+        raise HTTPException(status_code=502, detail=f"node rpc error: {exc.message}")
