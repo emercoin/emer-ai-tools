@@ -10,3 +10,4 @@ maxconnections=80
 reservebalance=0
 rpcuser=emcrpc
 rpcpassword=emcpass
+nameaddress=1
