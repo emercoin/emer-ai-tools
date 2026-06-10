@@ -24,8 +24,9 @@ Name-Value Storage (NVS) into an identity + memory layer:
   by signing a challenge with its key (no human, no GitHub round-trip per call).
 - **Durable memory** — store hashes of research / memories / artifacts as NVS
   records; the body stays off-chain (e.g. IPFS), the hash is anchored on-chain.
-- **No coins required** — the gateway's hot-wallet pays for every record, so agents
-  never need to acquire EMC. This removes the single biggest barrier to entry.
+- **No coins required (for agents)** — agents never acquire EMC; the gateway
+  operator funds the hot-wallet from the treasury and it pays for every record.
+  This removes the single biggest barrier to entry.
 
 ## How it works
 
@@ -44,14 +45,23 @@ Name-Value Storage (NVS) into an identity + memory layer:
 
 ## Trust model
 
-- **Root of trust = GitHub identity.** Stateless — any valid GitHub identity may
-  create its own `ai:gh:<id>` record and further records. No agent registry.
+- **Root of trust = GitHub identity.** No persistent agent registry — any valid
+  GitHub identity may create its own `ai:gh:<id>` record and further records. (The
+  gateway keeps only ephemeral state: login nonces + rate-limit counters.)
 - **Credential = session JWT** carrying `github_id` + tariff; the gateway only
   verifies the signature.
+- **Address control is proven at login, not registration.** The identity record
+  is a *claim* of an address; control is verified when the agent signs a challenge
+  nonce at `/auth/agent-login` (`verifymessage`). So registering an address you
+  don't control only locks yourself out — it grants nothing to anyone else.
 - **On-chain ownership.** Records are owned by the gateway's wallet address; an
   agent's ownership is asserted *inside the record value* (github_id + address +
   signature) and verified by the node's `verifymessage`. Records can later be
   transferred to an agent's own address (NVS name transfer).
+- **Identity namespace.** `ai:gh:<id>` is the *bootstrap* path (GitHub as a
+  ready-made identity provider); the namespace is designed to extend to other
+  neutral roots — e.g. `ai:dns:<domain>`, `ai:did:<method>:<id>` — so the layer is
+  not permanently tied to one provider.
 
 ## Tools (MCP)
 
@@ -69,6 +79,7 @@ Name-Value Storage (NVS) into an identity + memory layer:
 | Endpoint | Purpose |
 |----------|---------|
 | `GET /` | machine-readable state: node / wallet / redis / sync |
+| `GET /status` | node sync state (blocks, headers, progress, synced) — operator health-check |
 | `POST /auth/login` | GitHub token → JWT |
 | `POST /auth/challenge` + `POST /auth/agent-login` | signature login |
 | `POST /nvs/identity` | register identity record |
@@ -101,7 +112,8 @@ Name-Value Storage (NVS) into an identity + memory layer:
 3. **First flow (as an agent):**
    `login` → `register_identity(<your address>)` → `store_memory(<hash>)` →
    `read_record("ai:gh:<id>")`. A record reads back as `pending` immediately and
-   `confirmed` after the next block (~10 min).
+   `confirmed` after the next block (typically within ~10 min — Emercoin's target
+   block time is 10 min on average; a given block can land in seconds or 40+ min).
 
 ### Use it as a Claude Code skill
 

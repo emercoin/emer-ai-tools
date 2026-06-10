@@ -5,9 +5,8 @@ Status: draft, 2026-06-10. Seeds the future agent-facing docs on emercoin.com.
 ## Purpose
 A unified HTTP API that lets **AI agents** use the Emercoin blockchain as an
 identity + data layer: store agent identity, hashes of research, memory pointers
-as NVS (name-value storage) records. Fits the thesis that **agent identity** is
-the foundational security problem — agents spawn sub-agents and delegate rights
-at machine speed.
+as NVS (name-value storage) records. (For *why* this matters — the agent-identity
+problem — see `AGENTS.md`; this document covers *how* it is built.)
 
 ## Topology
 ```
@@ -24,9 +23,11 @@ The node authorizes nothing; all IAM lives in `gateway`. Every future service
 (exchanger included) is just an HTTP client of the gateway.
 
 ## Authorization
-- **Registration root = GitHub ID.** GitHub identity is the trust anchor.
-  Stateless: we trust a valid GitHub identity and grant it the right to create
-  its root NVS record and further NVS records. No persistent agent registry.
+- **Registration root = GitHub ID.** GitHub identity is the trust anchor. No
+  persistent agent registry: we trust a valid GitHub identity and grant it the
+  right to create its root NVS record and further NVS records. The identity record
+  is JWT-gated to its own `ai:gh:<id>` name, so it can only *claim* an address;
+  control of that address is proven later, at agent-login.
 - **Login paths:**
   - *Human / bootstrap:* `POST /auth/login` with a GitHub token -> JWT. Used once
     to register the agent's identity record on-chain (`POST /nvs/identity` with the
@@ -38,9 +39,10 @@ The node authorizes nothing; all IAM lives in `gateway`. Every future service
     address must match the one bound on-chain in `ai:gh:<github_id>`.
 - **Credential = session JWT.** Self-contained: carries `github_id`, agent pubkey,
   tariff/scope. Gateway only verifies the signature — no DB lookup.
-- **Tariffs / rate limit:** free tier = **10 NVS writes / minute**. Enforced via an
-  in-memory **token bucket keyed by `github_id`** (Redis-ready for scale). This is
-  the only state — ephemeral counters, not an agent registry.
+- **Tariffs / rate limit:** free tier = **10 NVS writes / minute**. Enforced via a
+  **sliding 60s window keyed by `github_id`** (Redis sorted set of write
+  timestamps + atomic Lua check, so the per-minute boundary can't be burst across).
+  This plus login nonces are the only state — ephemeral, not an agent registry.
 
 ## On-chain ownership (consequence of internal wallet)
 The node wallet is shared and internal, so on-chain **all NVS records are owned by
@@ -68,18 +70,30 @@ gateway/
 ```
 
 ## Phase 1 (prototype) endpoints
-- `POST /auth/login` — GitHub identity (dev: GitHub token; later: agent signature) -> JWT
-- `GET  /info` — node `getinfo` passthrough (read, sanity check)
-- `POST /nvs` — create NVS record (rate-limited by tariff)
-- `GET  /nvs/{name}` — read NVS record (`name_show`)
+- `POST /auth/login` — GitHub token -> JWT (bootstrap); `POST /auth/challenge` +
+  `POST /auth/agent-login` — agent signature -> JWT (machine speed)
+- `GET  /info`, `GET /status` — node `getinfo` / sync-state passthrough (sanity check)
+- `POST /nvs/identity` — register/rotate the `ai:gh:<id>` identity record
+- `POST /nvs/mem`, `POST /nvs/mem/batch` — store memory hash(es); batch is atomic
+  (`name_updatemany`). All rate-limited by tariff.
+- `GET  /nvs/{name}` — read NVS record (`name_show`, or mempool as `pending`)
+- `GET  /wallet/address`, `GET /wallet/balance` — fund/inspect the hot-wallet (dev/admin)
 
 ## Out of scope (separate services)
 - USDT->EMC exchanger — own wallet, own logic, HTTP client of gateway.
 - Wallet/coin spend operations — later phase, behind scope + limits.
 
 ## Open points
-- A. "Stateless" reconciled with rate-limit = no agent DB, but ephemeral per-id
-  counters. (recommended above)
+- A. "No agent registry" reconciled with rate-limit = no agent DB, but ephemeral
+  per-id counters + login nonces. (recommended above)
 - B. On-chain owner = gateway wallet; agent ownership asserted in value. (recommended above)
 - GitHub mechanism for agents (App vs OAuth App vs signed artifact) — TBD.
+- **Hot-wallet hardening.** Today one hot-wallet signs every write and its balance
+  is RPC-visible. Plan the exchange pattern: a small spending wallet refilled
+  periodically from a cold treasury, plus a spend rate cap (EMC/hour) and alerting
+  on anomalous write rate. A public custody policy buys more trust than a legal
+  entity (layer-2 "credible without a juridical person").
+- **Namespace beyond GitHub.** `ai:gh:<id>` is a bootstrap root; design for
+  `ai:dns:<domain>`, `ai:did:<method>:<id>`, etc. so the "neutral cross-org
+  identity" claim isn't tied to a single provider (GitHub = Microsoft).
 - Repo placement: currently alongside node infra; may split into own repo.

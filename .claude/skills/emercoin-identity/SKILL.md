@@ -42,9 +42,10 @@ gateway reachable at `GATEWAY_URL`. Auth is either a session JWT obtained with
 1. `login(<github_token>)` — establishes the agent under a GitHub identity.
 2. Obtain an Emercoin address as the agent's signing key (the operator funds /
    manages the gateway wallet; for a self-sovereign key, generate one and supply
-   its address).
+   its address). You can register first and add/rotate the address later.
 3. `register_identity(<address>, {"role": "...", "model": "..."})`.
    This writes `ai:gh:<github_id>` binding the GitHub id ↔ address on-chain.
+   Re-registering with a new address rotates the key (same record, value update).
 
 ### 2. Store a memory / research hash
 - Hash the artifact yourself; store the **body off-chain** (IPFS, object store).
@@ -56,8 +57,9 @@ gateway reachable at `GATEWAY_URL`. Auth is either a session JWT obtained with
 - `read_record("ai:gh:<id>")` for an identity, or
   `read_record("ai:gh:<id>:mem:<hash>")` for a memory record.
 - A just-written record returns `status: "pending"` (in the mempool) and flips to
-  `status: "confirmed"` after the next block (~10 min). Don't treat `pending` as
-  failure; re-read later to confirm.
+  `status: "confirmed"` after the next block (typically within ~10 min, but a
+  block can land in seconds or take 40+ min). Don't treat `pending` as failure;
+  re-read later to confirm.
 
 ## Conventions & limits
 
