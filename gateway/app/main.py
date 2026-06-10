@@ -304,10 +304,17 @@ async def create_mem(
 
 @app.get("/nvs/{name:path}")
 async def read_nvs(name: str, rpc: EmercoinRPC = Depends(get_rpc)) -> dict:
+    """Read an NVS record. Confirmed names come from the name DB; a name that was
+    just written but not yet mined is reported as `pending` from the mempool."""
     try:
-        return await nvs.show_record(rpc, name)
-    except RPCError as exc:
-        raise HTTPException(status_code=404, detail=f"name not found: {exc.message}")
+        record = await nvs.show_record(rpc, name)
+        record["status"] = "confirmed"
+        return record
+    except RPCError:
+        pending = await nvs.find_in_mempool(rpc, name)
+        if pending is not None:
+            return {"status": "pending", **pending}
+        raise HTTPException(status_code=404, detail=f"name not found: {name}")
 
 
 # --- wallet (dev/admin) ----------------------------------------------------

@@ -34,6 +34,19 @@ async def show_record(rpc: EmercoinRPC, name: str) -> dict[str, Any]:
     return await rpc.call("name_show", name)
 
 
+async def find_in_mempool(rpc: EmercoinRPC, name: str) -> dict[str, Any] | None:
+    """A just-written name lives in the mempool until a block confirms it;
+    name_show can't see it yet, but name_mempool can."""
+    try:
+        entries = await rpc.call("name_mempool")
+    except RPCError:
+        return None
+    for entry in entries:
+        if isinstance(entry, dict) and entry.get("name") == name:
+            return entry
+    return None
+
+
 async def get_identity(rpc: EmercoinRPC, github_id: int) -> dict[str, Any]:
     """Read and parse the on-chain identity record value for a GitHub id.
 
