@@ -26,5 +26,8 @@ class RateLimiter:
                 detail=f"rate limit exceeded: {limit} NVS writes/min on this tier",
             )
 
+    async def ping(self) -> bool:
+        return await self._redis.ping()
+
     async def aclose(self) -> None:
         await self._redis.aclose()

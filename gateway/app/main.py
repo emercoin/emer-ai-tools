@@ -90,6 +90,77 @@ class WriteResponse(BaseModel):
 
 # --- health / status -------------------------------------------------------
 
+@app.get("/")
+async def root(
+    rpc: EmercoinRPC = Depends(get_rpc), rl: RateLimiter = Depends(get_ratelimiter)
+) -> dict:
+    """Aggregated machine-readable state for agents: node, wallet, infra, sync.
+
+    Never 500s — each component is probed independently and reported as ok/down.
+    """
+    node: dict = {"ok": False}
+    wallet: dict = {"ok": False}
+    redis_state: dict = {"ok": False}
+
+    try:
+        info = await rpc.call("getinfo")
+        node["ok"] = True
+        node["version"] = info.get("fullversion")
+        node["connections"] = info.get("connections")
+        try:
+            chain = await rpc.call("getblockchaininfo")
+            progress = chain.get("verificationprogress")
+            node["blocks"] = chain.get("blocks")
+            node["headers"] = chain.get("headers")
+            node["verificationprogress"] = progress
+            node["synced"] = bool(progress is not None and progress > 0.9999)
+        except Exception:
+            node["blocks"] = info.get("blocks")
+            node["synced"] = None
+
+        # Wallet lives inside the node; if getinfo worked, the wallet is loaded.
+        wallet["ok"] = True
+        wallet["encrypted"] = info.get("encrypted")
+        wallet["balance"] = info.get("balance")
+        try:
+            winfo = await rpc.call("getwalletinfo")
+            wallet["unconfirmed"] = winfo.get("unconfirmed_balance")
+            if not info.get("encrypted"):
+                wallet["locked"] = None  # not applicable to an unencrypted wallet
+            else:
+                wallet["locked"] = winfo.get("unlocked_until", 0) == 0
+        except Exception:
+            wallet["locked"] = None
+    except Exception as exc:
+        node["error"] = str(exc) or exc.__class__.__name__
+
+    try:
+        await rl.ping()
+        redis_state["ok"] = True
+    except Exception as exc:
+        redis_state["error"] = str(exc) or exc.__class__.__name__
+
+    if not node["ok"]:
+        status = "down"
+    elif not redis_state["ok"]:
+        status = "degraded"
+    elif node.get("synced"):
+        status = "ok"
+    else:
+        status = "syncing"
+
+    return {
+        "service": "emercoin-agent-gateway",
+        "description": "Emercoin wallet gateway — on-chain identity & memory layer for AI agents",
+        "version": app.version,
+        "status": status,
+        "node": node,
+        "wallet": wallet,
+        "redis": redis_state,
+        "docs": "/docs",
+    }
+
+
 @app.get("/healthz")
 async def healthz() -> dict:
     return {"status": "ok"}
