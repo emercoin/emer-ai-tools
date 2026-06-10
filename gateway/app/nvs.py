@@ -34,6 +34,35 @@ async def show_record(rpc: EmercoinRPC, name: str) -> dict[str, Any]:
     return await rpc.call("name_show", name)
 
 
+async def show_history(rpc: EmercoinRPC, name: str) -> Any:
+    """Full value history of a name (name_history)."""
+    return await rpc.call("name_history", name)
+
+
+async def names_for_address(rpc: EmercoinRPC, address: str) -> Any:
+    """All names owned by an address (name_scan_address)."""
+    return await rpc.call("name_scan_address", address)
+
+
+def mem_operation(github_id: int, content_hash: str, metadata: dict, days: int) -> dict[str, Any]:
+    """Build one name_updatemany NEW op for a memory record."""
+    value = {"github_id": github_id, "content_hash": content_hash, "metadata": metadata}
+    return {
+        "NEW": mem_name(github_id, content_hash),
+        "value": json.dumps(value, separators=(",", ":"), ensure_ascii=False),
+        "days": days,
+    }
+
+
+async def write_batch(rpc: EmercoinRPC, operations: list[dict[str, Any]]) -> Any:
+    """Atomic multi-record write in a single transaction (name_updatemany).
+
+    Returns one txid for the whole batch. Note: raw JSON-RPC wants a native
+    array here (not the string form shown in bitcoin-cli examples).
+    """
+    return await rpc.call("name_updatemany", operations)
+
+
 async def find_in_mempool(rpc: EmercoinRPC, name: str) -> dict[str, Any] | None:
     """A just-written name lives in the mempool until a block confirms it;
     name_show can't see it yet, but name_mempool can."""

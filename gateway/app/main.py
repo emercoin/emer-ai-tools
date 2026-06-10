@@ -83,6 +83,16 @@ class MemRequest(BaseModel):
     metadata: dict = {}
 
 
+class MemBatchRequest(BaseModel):
+    records: list[MemRequest] = Field(..., min_length=1, max_length=100)
+
+
+class BatchWriteResponse(BaseModel):
+    txid: object
+    count: int
+    names: list[str]
+
+
 class WriteResponse(BaseModel):
     name: str
     result: object
@@ -300,6 +310,53 @@ async def create_mem(
         "metadata": req.metadata,
     }
     return await _write(name, value, principal, rpc, rl)
+
+
+@app.post("/nvs/mem/batch", response_model=BatchWriteResponse)
+async def create_mem_batch(
+    req: MemBatchRequest,
+    principal: Principal = Depends(current_principal),
+    rpc: EmercoinRPC = Depends(get_rpc),
+    rl: RateLimiter = Depends(get_ratelimiter),
+) -> BatchWriteResponse:
+    """Atomically store many memory records in one transaction (name_updatemany)."""
+    await rl.check_and_incr(principal.github_id, settings.free_tier_writes_per_min, len(req.records))
+    ops = [
+        nvs.mem_operation(principal.github_id, r.content_hash, r.metadata, settings.nvs_default_days)
+        for r in req.records
+    ]
+    try:
+        txid = await nvs.write_batch(rpc, ops)
+    except RPCError as exc:
+        raise HTTPException(status_code=502, detail=f"batch write failed: {exc.message}")
+    return BatchWriteResponse(txid=txid, count=len(ops), names=[op["NEW"] for op in ops])
+
+
+@app.get("/history/{name:path}")
+async def name_history(name: str, rpc: EmercoinRPC = Depends(get_rpc)) -> dict:
+    """Value history of an NVS name (name_history)."""
+    try:
+        return {"name": name, "history": await nvs.show_history(rpc, name)}
+    except RPCError as exc:
+        raise HTTPException(status_code=404, detail=f"name not found: {exc.message}")
+
+
+@app.get("/addresses/{address}/names")
+async def address_names(address: str, rpc: EmercoinRPC = Depends(get_rpc)) -> dict:
+    """All names owned by an address (name_scan_address) — basis for record export.
+
+    Requires the node's name-address index (`nameaddress=1` in emercoin.conf,
+    then a reindex); reported as 501 when it isn't enabled.
+    """
+    try:
+        return {"address": address, "names": await nvs.names_for_address(rpc, address)}
+    except RPCError as exc:
+        if exc.code == -20 or "index is not available" in exc.message:
+            raise HTTPException(
+                status_code=501,
+                detail=f"name-address index disabled on the node: {exc.message}",
+            )
+        raise HTTPException(status_code=502, detail=f"node rpc error: {exc.message}")
 
 
 @app.get("/nvs/{name:path}")

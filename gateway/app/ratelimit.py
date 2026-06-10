@@ -14,11 +14,12 @@ class RateLimiter:
     def __init__(self, url: str) -> None:
         self._redis = redis.from_url(url, decode_responses=True)
 
-    async def check_and_incr(self, github_id: int, limit: int) -> None:
+    async def check_and_incr(self, github_id: int, limit: int, n: int = 1) -> None:
+        """Count `n` writes against the per-minute window (n>1 for batch writes)."""
         window = int(time.time() // 60)
         key = f"rl:nvs:{github_id}:{window}"
-        count = await self._redis.incr(key)
-        if count == 1:
+        count = await self._redis.incrby(key, n)
+        if count == n:
             await self._redis.expire(key, 60)
         if count > limit:
             raise HTTPException(
