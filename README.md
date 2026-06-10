@@ -1,7 +1,16 @@
 ![](https://github.com/emercoin/docker/blob/main/docker.png)
 
-# Emercoin Docker
-Docker compose image for Emercoin core
+# Emercoin Docker — node + AI agent tools
+
+Docker compose image for Emercoin core **and `emer-ai-tools`: an on-chain
+identity & memory layer for AI agents** built on top of it.
+
+> **🤖 Building with an AI agent?** Read **[AGENTS.md](AGENTS.md)** — it explains
+> how an agent gets a verifiable on-chain identity and durable memory through the
+> `emercoin-agent` MCP server (no cryptocurrency required). A ready-to-use Claude
+> Code skill ships at `.claude/skills/emercoin-identity/`.
+>
+> The rest of this README covers running the Emercoin node itself.
 
 ### Why is all this necessary?
 
