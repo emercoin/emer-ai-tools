@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from . import nvs
 from .auth import Principal, current_principal, issue_jwt, resolve_github_token
+from .challenge import ChallengeStore
 from .config import settings
 from .ratelimit import RateLimiter
 from .rpc import EmercoinRPC, RPCError
@@ -21,9 +22,11 @@ from .rpc import EmercoinRPC, RPCError
 async def lifespan(app: FastAPI):
     app.state.rpc = EmercoinRPC(settings.rpc_url, settings.rpc_user, settings.rpc_password)
     app.state.ratelimiter = RateLimiter(settings.redis_url)
+    app.state.challenges = ChallengeStore(settings.redis_url)
     yield
     await app.state.rpc.aclose()
     await app.state.ratelimiter.aclose()
+    await app.state.challenges.aclose()
 
 
 app = FastAPI(title="Emercoin Agent Gateway", version="0.0.1", lifespan=lifespan)
@@ -35,6 +38,10 @@ def get_rpc(request: Request) -> EmercoinRPC:
 
 def get_ratelimiter(request: Request) -> RateLimiter:
     return request.app.state.ratelimiter
+
+
+def get_challenges(request: Request) -> ChallengeStore:
+    return request.app.state.challenges
 
 
 # --- schemas ---------------------------------------------------------------
@@ -52,8 +59,23 @@ class TokenResponse(BaseModel):
 
 
 class IdentityRequest(BaseModel):
-    pubkey: str = Field(..., description="Agent public key bound to this GitHub identity")
+    address: str = Field(..., description="Agent's Emercoin address; the anchor for signature login")
     metadata: dict = {}
+
+
+class ChallengeRequest(BaseModel):
+    github_id: int
+
+
+class ChallengeResponse(BaseModel):
+    github_id: int
+    nonce: str = Field(..., description="Sign this exact string with the agent's address key")
+
+
+class AgentLoginRequest(BaseModel):
+    github_id: int
+    address: str
+    signature: str = Field(..., description="signmessage(address, nonce) from the challenge")
 
 
 class MemRequest(BaseModel):
@@ -104,10 +126,53 @@ async def status(rpc: EmercoinRPC = Depends(get_rpc)) -> dict:
 
 @app.post("/auth/login", response_model=TokenResponse)
 async def login(req: LoginRequest) -> TokenResponse:
+    """Bootstrap login via GitHub identity (human / first-time registration)."""
     github_id, github_login = await resolve_github_token(req.github_token)
     token = issue_jwt(github_id, github_login)
     return TokenResponse(
         access_token=token, github_id=github_id, github_login=github_login, tariff="free"
+    )
+
+
+@app.post("/auth/challenge", response_model=ChallengeResponse)
+async def auth_challenge(
+    req: ChallengeRequest, challenges: ChallengeStore = Depends(get_challenges)
+) -> ChallengeResponse:
+    nonce = await challenges.issue(str(req.github_id))
+    return ChallengeResponse(github_id=req.github_id, nonce=nonce)
+
+
+@app.post("/auth/agent-login", response_model=TokenResponse)
+async def agent_login(
+    req: AgentLoginRequest,
+    rpc: EmercoinRPC = Depends(get_rpc),
+    challenges: ChallengeStore = Depends(get_challenges),
+) -> TokenResponse:
+    """Machine-speed login: agent signs the challenge nonce with its address key.
+
+    Signature is verified by the node (`verifymessage`); the address must match
+    the one bound to this GitHub identity in its on-chain identity record.
+    """
+    nonce = await challenges.consume(str(req.github_id))
+    if not nonce:
+        raise HTTPException(status_code=401, detail="no active challenge; request /auth/challenge")
+    try:
+        valid = await rpc.call("verifymessage", req.address, req.signature, nonce)
+    except RPCError as exc:
+        raise HTTPException(status_code=502, detail=f"verify failed: {exc.message}")
+    if not valid:
+        raise HTTPException(status_code=401, detail="bad signature")
+
+    identity = await nvs.get_identity(rpc, req.github_id)
+    if not identity:
+        raise HTTPException(status_code=404, detail="no on-chain identity; register via /nvs/identity")
+    if identity.get("address") != req.address:
+        raise HTTPException(status_code=403, detail="address not bound to this GitHub identity")
+
+    github_login = identity.get("github_login", str(req.github_id))
+    token = issue_jwt(req.github_id, github_login)
+    return TokenResponse(
+        access_token=token, github_id=req.github_id, github_login=github_login, tariff="free"
     )
 
 
@@ -144,7 +209,7 @@ async def create_identity(
     value = {
         "github_id": principal.github_id,
         "github_login": principal.github_login,
-        "pubkey": req.pubkey,
+        "address": req.address,
         "metadata": req.metadata,
     }
     return await _write(name, value, principal, rpc, rl)

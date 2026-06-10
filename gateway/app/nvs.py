@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from .rpc import EmercoinRPC
+from .rpc import EmercoinRPC, RPCError
 
 
 def root_name(github_id: int) -> str:
@@ -32,3 +32,18 @@ async def write_record(rpc: EmercoinRPC, name: str, value: dict[str, Any], days:
 
 async def show_record(rpc: EmercoinRPC, name: str) -> dict[str, Any]:
     return await rpc.call("name_show", name)
+
+
+async def get_identity(rpc: EmercoinRPC, github_id: int) -> dict[str, Any]:
+    """Read and parse the on-chain identity record value for a GitHub id.
+
+    Returns {} if the name does not exist or its value is not valid JSON.
+    """
+    try:
+        record = await show_record(rpc, root_name(github_id))
+    except RPCError:
+        return {}
+    try:
+        return json.loads(record.get("value", "{}"))
+    except (ValueError, TypeError):
+        return {}

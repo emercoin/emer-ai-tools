@@ -31,11 +31,17 @@ class EmercoinRPC:
     async def call(self, method: str, *params: Any) -> Any:
         payload = {"jsonrpc": "1.0", "id": "gateway", "method": method, "params": list(params)}
         resp = await self._client.post(self._url, json=payload)
-        resp.raise_for_status()
-        data = resp.json()
+        # Emercoin/Bitcoin RPC returns HTTP 500/404 with a JSON-RPC error body for
+        # method-level failures, so parse the body before raising on HTTP status.
+        try:
+            data = resp.json()
+        except ValueError:
+            resp.raise_for_status()
+            raise
         if data.get("error"):
             err = data["error"]
             raise RPCError(err.get("code"), err.get("message", "unknown"))
+        resp.raise_for_status()
         return data["result"]
 
     async def aclose(self) -> None:

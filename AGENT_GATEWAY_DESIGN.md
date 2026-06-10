@@ -28,10 +28,14 @@ The node authorizes nothing; all IAM lives in `gateway`. Every future service
   Stateless: we trust a valid GitHub identity and grant it the right to create
   its root NVS record and further NVS records. No persistent agent registry.
 - **Login paths:**
-  - *Agent (target):* agent with granted rights authenticates with a **signature**
-    (its keypair), bound to a GitHub identity.
-  - *Human (for tests / bootstrap):* manual login flow so a person can verify the
-    system works.
+  - *Human / bootstrap:* `POST /auth/login` with a GitHub token -> JWT. Used once
+    to register the agent's identity record on-chain (`POST /nvs/identity` with the
+    agent's Emercoin address).
+  - *Agent (machine speed):* challenge-response signature, no GitHub round-trip:
+    `POST /auth/challenge {github_id}` -> nonce; agent signs it with its address key;
+    `POST /auth/agent-login {github_id, address, signature}` -> JWT. The node's
+    `verifymessage` checks the signature (pure crypto, works while syncing); the
+    address must match the one bound on-chain in `ai:gh:<github_id>`.
 - **Credential = session JWT.** Self-contained: carries `github_id`, agent pubkey,
   tariff/scope. Gateway only verifies the signature — no DB lookup.
 - **Tariffs / rate limit:** free tier = **10 NVS writes / minute**. Enforced via an
