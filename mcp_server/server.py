@@ -85,6 +85,24 @@ async def store_memory(content_hash: str, metadata: dict | None = None) -> dict:
 
 
 @mcp.tool()
+async def store_memory_batch(records: list[dict]) -> dict:
+    """Store many memory hashes in ONE atomic on-chain transaction (cheaper and
+    atomic vs. calling store_memory repeatedly).
+
+    Each record is {"content_hash": str, "metadata"?: dict}. Returns one txid for
+    the whole batch. Counts as len(records) against the per-minute write tier.
+    """
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(
+            f"{GATEWAY_URL}/nvs/mem/batch",
+            headers=_auth_headers(),
+            json={"records": records},
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+
+@mcp.tool()
 async def read_record(name: str) -> dict:
     """Read any NVS record by name (e.g. ai:gh:12345 or ai:gh:12345:mem:<hash>)."""
     async with httpx.AsyncClient(timeout=15.0) as client:

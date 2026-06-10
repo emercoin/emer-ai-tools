@@ -10,6 +10,7 @@ Emercoin chain as its identity + memory layer.
 | `login(github_token)` | no | `POST /auth/login` (caches JWT) |
 | `register_identity(address, metadata?)` | yes | `POST /nvs/identity` |
 | `store_memory(content_hash, metadata?)` | yes | `POST /nvs/mem` |
+| `store_memory_batch(records)` | yes | `POST /nvs/mem/batch` (atomic, one tx) |
 | `read_record(name)` | no | `GET /nvs/{name}` |
 
 ## Config (env)
