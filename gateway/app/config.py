@@ -20,5 +20,8 @@ class Settings(BaseSettings):
     free_tier_writes_per_min: int = 10
     redis_url: str = "redis://redis:6379/0"
 
+    # NVS record lifetime in days (records expire on Emercoin).
+    nvs_default_days: int = 30
+
 
 settings = Settings()
