@@ -1,4 +1,4 @@
-![](https://github.com/emercoin/docker/blob/main/docker.png)
+![](https://github.com/emercoin/emer-ai-tools/blob/main/docs/docker.png)
 # Emercoin Docker
 Docker compose image for Emercoin core
 
@@ -15,7 +15,7 @@ Core — классическая версия, просто кошелек Эм
 
 Склонировать репозитарий и перейти в папку с проектом:
 ```
-git clone https://github.com/emercoin/docker emer_docker_wallet && cd emer_docker_wallet
+git clone https://github.com/emercoin/emer-ai-tools emer_docker_wallet && cd emer_docker_wallet
 ``` 
 
 Переименовать: `emercoin.conf.example` в `emercoin.conf`

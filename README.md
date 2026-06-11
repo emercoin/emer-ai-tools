@@ -1,4 +1,4 @@
-![](https://github.com/emercoin/docker/blob/main/docs/docker.png)
+![](https://github.com/emercoin/emer-ai-tools/blob/main/docs/docker.png)
 
 # Emercoin + AI agent tools
 
@@ -25,7 +25,7 @@ Install [Docker](https://docs.docker.com/engine/install/) and [docker-compose](h
 
 Clone the repository and go to the project folder:
 ```
-git clone https://github.com/emercoin/docker emer_docker_wallet && cd emer_docker_wallet
+git clone https://github.com/emercoin/emer-ai-tools emer_docker_wallet && cd emer_docker_wallet
 ```
 
 Rename `node/emercoin.conf.example` to `node/emercoin.conf`
