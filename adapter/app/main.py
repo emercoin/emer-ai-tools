@@ -213,17 +213,27 @@ async def address_names(address: str, rpc: EmercoinRPC = Depends(get_rpc)) -> di
 
 @app.get("/nvs/{name:path}")
 async def read(name: str, rpc: EmercoinRPC = Depends(get_rpc)) -> dict:
-    """Read an NVS record. Confirmed names come from the name DB; a name that was
-    just written but not yet mined is reported as `pending` from the mempool."""
+    """Read an NVS record. A confirmed value comes from the name DB; a name written
+    but not yet mined is reported as `pending` from the mempool.
+
+    A name can be confirmed AND have an unmined update sitting in the mempool (e.g.
+    right after a re-register / key rotation). In that case `name_show` still
+    returns the OLD value, so we flag `pending_update` and attach the in-flight
+    mempool entry — otherwise a caller would mistake the stale value for the latest.
+    """
     try:
         record = await nvs.show_record(rpc, name)
-        record["status"] = "confirmed"
-        return record
     except RPCError:
         pending = await nvs.find_in_mempool(rpc, name)
         if pending is not None:
             return {"status": "pending", **pending}
         raise HTTPException(status_code=404, detail=f"name not found: {name}")
+    record["status"] = "confirmed"
+    pending = await nvs.find_in_mempool(rpc, name)
+    if pending is not None:
+        record["pending_update"] = True
+        record["pending"] = pending
+    return record
 
 
 # --- crypto / wallet -------------------------------------------------------
