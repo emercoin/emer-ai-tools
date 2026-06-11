@@ -27,9 +27,11 @@
 ### In Progress
 - [ ] **Node-образ через CI** (`emercoin/core`): воркфлоу `.github/workflows/publish-node.yml`
       готов (триггер `node-v*`, amd64, версия из node/Dockerfile, dispatch→`<ver>-test`).
-      ⚠ публикует ОФИЦИАЛЬНЫЙ образ — перед релизным тегом прогнать `workflow_dispatch`
-      (`-test`) и сверить с текущим upstream. Node/Dockerfile на ubuntu:16.04 — возможно,
-      стоит обновить базу/добавить CMD перед перезаписью emercoin/core.
+      Dockerfile модернизирован: multi-stage debian:bookworm-slim, **237MB→87MB**, +emercoin-cli,
+      дефолтный CMD = запуск ноды (был bash); собран и проверен живьём (daemon стартует,
+      getinfo, синк с пиром). ⚠ публикует ОФИЦИАЛЬНЫЙ образ и меняет поведение (base/CMD) —
+      перед релизным тегом прогнать `workflow_dispatch` (`:0.8.5-test`) и сверить с upstream.
+      Опц.: GPG-верификация тарбола по emercoin.pub в builder-стадии.
     
 
 ### Done ✓
