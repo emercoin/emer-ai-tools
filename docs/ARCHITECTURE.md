@@ -95,7 +95,7 @@ both pipelines:
 
 | Image | Source | Workflow | Release tag | Arch |
 |-------|--------|----------|-------------|------|
-| `emercoin/rest-api` | `adapter/` | `publish-rest-api.yml` | `v*` (e.g. `v0.0.1`) | amd64+arm64 |
+| `emercoin/rest-api` | `adapter/` | `publish-rest-api.yml` | `rest-api-v*` (e.g. `rest-api-v0.0.1`) | amd64+arm64 |
 | `emercoin/core` | `node/` | `publish-node.yml` | `node-v*` (e.g. `node-v0.8.5`) | amd64 |
 
 - **`emercoin/rest-api`** — the generic RPC↔REST front for the wallet (nothing
