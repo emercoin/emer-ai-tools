@@ -31,17 +31,24 @@ Name-Value Storage (NVS) into an identity + memory layer:
 ## How it works
 
 ```
- AI agent ──MCP tools──▶ Gateway (auth boundary) ──JSON-RPC──▶ Emercoin node
-                              │                                   (NVS on-chain)
+ AI agent ──MCP tools──▶ edge (auth boundary) ──HTTP──▶ adapter ──JSON-RPC──▶ node
+                              │                       (RPC↔REST)        (NVS on-chain)
                               └── Redis (rate limit + login nonces)
 ```
 
+Two services, one responsibility each:
+
 - The **node** holds the chain and the hot-wallet; it lives on an internal network
   and authorizes nothing.
-- The **gateway** is the only trust boundary: it authenticates agents (GitHub ID →
-  session JWT, or signature login), rate-limits writes, and builds NVS records.
-- **MCP** is a thin client of the gateway so any MCP-capable agent can use it as tools.
-  The HTTP API is the canonical surface; everything else is a client of it.
+- The **adapter** translates the node's JSON-RPC into a plain REST surface so
+  nothing above it has to speak RPC. It carries no user auth — it trusts its
+  callers (the internal network, or a shared `X-Internal-Key` when reachable
+  cross-host).
+- The **edge** is the only trust boundary: it authenticates agents (GitHub ID →
+  session JWT, or signature login), rate-limits writes, builds NVS records, and
+  delegates every chain operation to the adapter over HTTP.
+- **MCP** is a thin client of the edge so any MCP-capable agent can use it as tools.
+  The edge HTTP API is the canonical agent-facing surface.
 
 ## Trust model
 
@@ -87,16 +94,19 @@ Name-Value Storage (NVS) into an identity + memory layer:
 | `GET /nvs/{name}` | read a record (`status`: confirmed \| pending) |
 | `GET /history/{name}` | value history of a name |
 | `GET /addresses/{address}/names` | names owned by an address |
-| `GET /wallet/address`, `GET /wallet/balance` | fund the hot-wallet (dev/admin) |
+
+Hot-wallet funding/inspection (`GET /wallet/address`, `GET /wallet/balance`) lives
+on the **adapter**, not the agent-facing edge — it's an internal operator concern.
 
 ## Quickstart
 
-1. **Run the stack.** Node (mainnet) + gateway + redis:
+1. **Run the stack.** Node (mainnet) + adapter + edge + redis, dev profile:
    ```bash
-   cp emercoin.conf.example emercoin.conf      # adjust rpcpassword
-   docker compose up -d                        # node (syncs)
-   docker compose -f docker-compose.dev.yaml up -d   # gateway + redis on :8000
+   cp node/emercoin.conf.example node/emercoin.conf   # adjust rpcpassword
+   docker compose -f deploy/docker-compose.yaml --profile dev up -d --build
    ```
+   Edge API on :8000; the adapter's RPC↔REST surface is browsable at
+   `http://localhost:8001/docs` in the dev profile.
 2. **Wire the MCP server into your agent** (Claude Code / Desktop):
    ```json
    {
@@ -127,7 +137,9 @@ it elsewhere.
 
 MVP, verified end-to-end on mainnet: identity registration, signature login,
 single + atomic batch memory writes, reads, history, names-by-address. See
-`AGENT_GATEWAY_DESIGN.md` for the design and `gateway/` / `mcp_server/` for code.
+`docs/ARCHITECTURE.md` for the design and `adapter/` (RPC↔REST), `edge/` (IAM),
+`mcp_server/` (MCP client) for code.
 
 Not yet production-hardened: GitHub App/OAuth login (current dev login takes a
-raw token), admin auth on `/wallet/*`, and a ≥32-byte JWT secret.
+raw token), a ≥32-byte JWT secret, and the hot-wallet split. The prod compose
+profile already gates the adapter behind a shared `X-Internal-Key`.

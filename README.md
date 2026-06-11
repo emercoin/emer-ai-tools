@@ -1,6 +1,6 @@
-![](https://github.com/emercoin/docker/blob/main/docker.png)
+![](https://github.com/emercoin/docker/blob/main/docs/docker.png)
 
-# Emercoin Docker — node + AI agent tools
+# Emercoin + AI agent tools
 
 Docker compose image for Emercoin core **and `emer-ai-tools`: an on-chain
 identity & memory layer for AI agents** built on top of it.
@@ -28,14 +28,16 @@ Clone the repository and go to the project folder:
 git clone https://github.com/emercoin/docker emer_docker_wallet && cd emer_docker_wallet
 ```
 
-Rename `emercoin.conf.example` to `emercoin.conf`
+Rename `node/emercoin.conf.example` to `node/emercoin.conf`
 
 **Start building a container with Emercoin:**
 
-for regular version Core
+The node alone (no agent tools) is the default stack — no profile needed:
 ```
-docker-compose up --build -d
+docker compose -f deploy/docker-compose.yaml up -d --build
 ```
+To also run the AI-agent tools (adapter + edge + redis), add `--profile dev`
+(or `--profile prod`); see [AGENTS.md](AGENTS.md).
 
 
 The container is launched, it takes time to download the blockchain (~ 3-5 hours), but some data can be obtained right now.
@@ -48,8 +50,8 @@ By default, port 6662 is used to connect to the container.
 
 **Change the password in the container:**
 ```
-docker-compose exec emc bash changepass.sh
-docker-compose restart emc
+docker compose -f deploy/docker-compose.yaml exec emc bash changepass.sh
+docker compose -f deploy/docker-compose.yaml restart emc
 ```
 
 ### How can I check that the container is working properly?
@@ -90,12 +92,12 @@ if everything is ok, the response will be in JSON format:
 
 **Stop container:**
 ```
-docker-compose stop emc
+docker compose -f deploy/docker-compose.yaml stop emc
 ```
 
 **Remove containers:**
 ```
-docker-compose down
+docker compose -f deploy/docker-compose.yaml down
 ```
 In this case, the blockchain database, wallet.dat and emercoin.conf are not deleted. It remains in volume docker_emercoin_data.
 

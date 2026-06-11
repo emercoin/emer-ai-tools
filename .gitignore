@@ -7,5 +7,9 @@ venv
 bin
 wallet.dat
 emercoin.conf
+node/emercoin.conf
+.env
+*/.env
+deploy/.env
 __pycache__/
 *.pyc

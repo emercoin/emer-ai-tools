@@ -1,7 +1,8 @@
 # Emercoin Agent — MCP server
 
-Thin MCP adapter over the Agent Gateway HTTP API. Lets an AI agent use the
-Emercoin chain as its identity + memory layer.
+Thin MCP client over the **edge** gateway HTTP API. Lets an AI agent use the
+Emercoin chain as its identity + memory layer. (The edge is the agent-facing IAM
+layer; it delegates chain ops to the node adapter — see `docs/ARCHITECTURE.md`.)
 
 ## Tools
 | Tool | Auth | Maps to |
@@ -14,7 +15,7 @@ Emercoin chain as its identity + memory layer.
 | `read_record(name)` | no | `GET /nvs/{name}` |
 
 ## Config (env)
-- `GATEWAY_URL` — gateway base URL (default `http://gateway:8000`)
+- `GATEWAY_URL` — edge gateway base URL (default `http://localhost:8000`)
 - `GATEWAY_JWT` — optional pre-issued token; otherwise use the `login` tool
 
 ## Run (stdio transport)

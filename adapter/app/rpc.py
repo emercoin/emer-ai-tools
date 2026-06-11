@@ -1,7 +1,8 @@
 """Async JSON-RPC client for an Emercoin Core node.
 
 The node has no real auth (rpcuser/rpcpassword over the internal docker network);
-all authorization lives in the gateway, not here.
+all node access is mediated by this adapter, which is the only thing that speaks
+RPC. Everything above the adapter talks plain HTTP REST.
 """
 from __future__ import annotations
 
@@ -29,7 +30,7 @@ class EmercoinRPC:
         )
 
     async def call(self, method: str, *params: Any) -> Any:
-        payload = {"jsonrpc": "1.0", "id": "gateway", "method": method, "params": list(params)}
+        payload = {"jsonrpc": "1.0", "id": "adapter", "method": method, "params": list(params)}
         resp = await self._client.post(self._url, json=payload)
         # Emercoin/Bitcoin RPC returns HTTP 500/404 with a JSON-RPC error body for
         # method-level failures, so parse the body before raising on HTTP status.

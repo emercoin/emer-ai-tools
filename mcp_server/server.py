@@ -1,11 +1,12 @@
 """MCP adapter for the Emercoin Agent Gateway.
 
-A thin MCP server that exposes the gateway's HTTP API as tools, so an AI agent
-can use the Emercoin chain as its identity + memory layer directly. The gateway
-remains the canonical surface and authorization boundary; this is just a client.
+A thin MCP server that exposes the edge gateway's HTTP API as tools, so an AI
+agent can use the Emercoin chain as its identity + memory layer directly. The
+edge remains the canonical agent-facing surface and authorization boundary; this
+is just a client.
 
 Config (env):
-  GATEWAY_URL  base URL of the gateway (default http://gateway:8000)
+  GATEWAY_URL  base URL of the edge gateway (default http://localhost:8000)
   GATEWAY_JWT  optional pre-issued session token; otherwise call the `login` tool
 
 Run: `python server.py` (stdio transport — the agent's MCP client launches it).
@@ -17,7 +18,7 @@ import os
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-GATEWAY_URL = os.environ.get("GATEWAY_URL", "http://gateway:8000").rstrip("/")
+GATEWAY_URL = os.environ.get("GATEWAY_URL", "http://localhost:8000").rstrip("/")
 
 mcp = FastMCP("emercoin-agent")
 

@@ -3,6 +3,9 @@
 - [ ] Сделать web-интефейс к emercoin core docker  
 
 #### Gateway — hardening перед публичным MVP
+- [x] **Разделить gateway на два слоя** — `adapter` (RPC↔REST, без IAM) и `edge`
+      (auth/ratelimit, HTTP-клиент адаптера). Compose в `deploy/` с профилями
+      dev|prod; адаптер за `X-Internal-Key` в проде (готово к разносу на хосты).
 - [ ] **Hot-wallet split** (паттерн бирж): маленький spending-кошелёк, регулярно
       пополняемый из холодной treasury; не держать весь баланс на ключе, который
       подписывает каждую запись.

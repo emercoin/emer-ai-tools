@@ -1,4 +1,4 @@
-"""Rate limiting — the only state the gateway keeps (ephemeral, not a registry).
+"""Rate limiting — the only state the edge keeps (ephemeral, not a registry).
 
 Sliding 60s window in Redis, keyed by github_id. Free tier = N writes/min.
 

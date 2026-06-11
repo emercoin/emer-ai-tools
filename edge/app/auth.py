@@ -1,11 +1,11 @@
-"""Authn/authz for the gateway.
+"""Authn/authz for the edge.
 
 GitHub identity is the trust anchor. We do NOT keep an agent registry — a valid
 GitHub identity is exchanged for a self-contained session JWT carrying the
 github_id + tariff. Every protected route just verifies the JWT signature.
 
 Dev login (this module): caller presents a GitHub token, we resolve it to a
-GitHub user via the API. The agent-signature login path lands later.
+GitHub user via the API. The agent-signature login path is in `main`.
 """
 from __future__ import annotations
 

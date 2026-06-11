@@ -1,26 +1,37 @@
-# Emercoin Agent Gateway — Design (v0)
+# Emercoin Agent Tools — Architecture (v1)
 
-Status: draft, 2026-06-10. Seeds the future agent-facing docs on emercoin.com.
+Status: draft, updated 2026-06-11. Seeds the future agent-facing docs on emercoin.com.
 
 ## Purpose
-A unified HTTP API that lets **AI agents** use the Emercoin blockchain as an
-identity + data layer: store agent identity, hashes of research, memory pointers
-as NVS (name-value storage) records. (For *why* this matters — the agent-identity
-problem — see `AGENTS.md`; this document covers *how* it is built.)
+Let **AI agents** use the Emercoin blockchain as an identity + data layer: store
+agent identity, hashes of research, memory pointers as NVS (name-value storage)
+records. (For *why* this matters — the agent-identity problem — see `AGENTS.md`;
+this document covers *how* it is built.)
 
-## Topology
+## Two layers, one responsibility each
+The earlier single "gateway" mixed two unrelated jobs — translating node RPC into
+REST, and authorizing agents. They are now split so each can be developed, tested
+and deployed on its own (e.g. wallet+adapter at home, edge on a VPS).
+
 ```
 docker-compose (internal network):
   emc        Emercoin node. RPC 6662 — internal only, NOT exposed.
              No real auth (rpcuser/pass). Trusts the internal network.
-  gateway    Unified HTTP API. The ONLY authorization boundary.  :8000
+  adapter    RPC↔REST. Turns node JSON-RPC into a plain REST surface so nothing
+             above it speaks RPC. NO user auth — trusts its callers (internal
+             network, or a shared X-Internal-Key cross-host). /docs in dev.   :8000
+  edge       Agent-facing IAM: the ONLY authorization boundary. GitHub login,
+             session JWTs, signature login, rate limit. HTTP client of adapter. :8000
+  redis      Ephemeral edge state: rate-limit windows + login nonces.
 
 external:
-  exchanger  Separate service, own wallet, USDT->EMC. HTTP client of gateway.
-  agent MCPs External agents with their own MCP servers -> call gateway HTTP.
+  exchanger  Separate service, own wallet, USDT->EMC — HTTP client of adapter.
+  agent MCPs External agents with their own MCP servers -> call the edge HTTP API.
 ```
-The node authorizes nothing; all IAM lives in `gateway`. Every future service
-(exchanger included) is just an HTTP client of the gateway.
+The node authorizes nothing; the **adapter** is policy-free RPC↔REST; all IAM lives
+in **edge**. Internal services that just need NVS/wallet ops talk to the adapter
+directly; external agents go through the edge. The two layers never share a
+process — edge reaches the adapter only over HTTP, so it can move to another host.
 
 ## Authorization
 - **Registration root = GitHub ID.** GitHub identity is the trust anchor. No
@@ -46,7 +57,7 @@ The node authorizes nothing; all IAM lives in `gateway`. Every future service
 
 ## On-chain ownership (consequence of internal wallet)
 The node wallet is shared and internal, so on-chain **all NVS records are owned by
-the gateway hot-wallet address**. Agent ownership is asserted *inside the record
+the hot-wallet address**. Agent ownership is asserted *inside the record
 value* (`github_id` + agent pubkey + signature), anchored to GitHub and recorded
 on-chain — not by the UTXO key. Acceptable for v1.
 
@@ -60,27 +71,42 @@ Delegation: a sub-agent record references its parent → verifiable trust chain.
 
 ## Components (Python / FastAPI)
 ```
-gateway/
-  core/rpc.py    async JSON-RPC client to emc (httpx, single client)
-  core/nvs.py    NVS domain: create/read records (name_new/name_show/name_filter)
-  auth/jwt.py    issue/verify session JWT
-  auth/github.py verify GitHub identity (login) + signature path
-  ratelimit.py   token bucket per github_id
-  api.py         FastAPI routes
+adapter/app/         RPC↔REST, policy-free. Trusts callers (+ optional X-Internal-Key).
+  rpc.py             async JSON-RPC client to emc (httpx, single client)
+  nvs.py             NVS mechanics: name_new/update/show/history/mempool/updatemany
+  main.py            REST routes (/nvs, /verify, /wallet, /info, /status)
+  config.py          ADAPTER_* settings
+
+edge/app/            agent-facing IAM. HTTP client of the adapter.
+  auth.py            GitHub login + issue/verify session JWT
+  challenge.py       single-use login nonces (Redis)
+  ratelimit.py       sliding 60s window per github_id (Redis + Lua)
+  names.py           the ai:gh:<id> naming policy (lives here, not in the adapter)
+  client.py          httpx client to the adapter (carries X-Internal-Key)
+  main.py            FastAPI routes; delegates chain ops to client.py
+  config.py          EDGE_* settings
+
+mcp_server/server.py thin MCP client of the edge HTTP API
 ```
 
-## Phase 1 (prototype) endpoints
+## Adapter endpoints (internal REST, no user auth)
+- `GET  /info`, `GET /status`, `GET /` — node info / sync / aggregated state
+- `POST /nvs`, `POST /nvs/batch` — generic create/update (name chosen by caller)
+- `GET  /nvs/{name}`, `GET /history/{name}`, `GET /addresses/{address}/names`
+- `POST /verify` — `verifymessage` (used by edge agent-login)
+- `GET  /wallet/address`, `GET /wallet/balance` — fund/inspect the hot-wallet
+
+## Edge endpoints (agent-facing, authorized + rate-limited)
 - `POST /auth/login` — GitHub token -> JWT (bootstrap); `POST /auth/challenge` +
   `POST /auth/agent-login` — agent signature -> JWT (machine speed)
-- `GET  /info`, `GET /status` — node `getinfo` / sync-state passthrough (sanity check)
+- `GET  /info`, `GET /status` — proxied from the adapter
 - `POST /nvs/identity` — register/rotate the `ai:gh:<id>` identity record
 - `POST /nvs/mem`, `POST /nvs/mem/batch` — store memory hash(es); batch is atomic
   (`name_updatemany`). All rate-limited by tariff.
-- `GET  /nvs/{name}` — read NVS record (`name_show`, or mempool as `pending`)
-- `GET  /wallet/address`, `GET /wallet/balance` — fund/inspect the hot-wallet (dev/admin)
+- `GET  /nvs/{name}` — read NVS record (confirmed, or mempool as `pending`)
 
 ## Out of scope (separate services)
-- USDT->EMC exchanger — own wallet, own logic, HTTP client of gateway.
+- USDT->EMC exchanger — own wallet, own logic, HTTP client of the adapter.
 - Wallet/coin spend operations — later phase, behind scope + limits.
 
 ## Open points
@@ -96,4 +122,8 @@ gateway/
 - **Namespace beyond GitHub.** `ai:gh:<id>` is a bootstrap root; design for
   `ai:dns:<domain>`, `ai:did:<method>:<id>`, etc. so the "neutral cross-org
   identity" claim isn't tied to a single provider (GitHub = Microsoft).
-- Repo placement: currently alongside node infra; may split into own repo.
+- **Adapter ↔ edge split (done, 2026-06-11).** Two FastAPI apps now; edge is an
+  HTTP client of the adapter. Layout: `node/` (image build), `adapter/`, `edge/`,
+  `mcp_server/`, `deploy/` (compose with dev|prod profiles). Next: the two layers
+  could become separate repos / hosts (wallet+adapter at home, edge on a VPS) —
+  the X-Internal-Key gate already supports that topology.
