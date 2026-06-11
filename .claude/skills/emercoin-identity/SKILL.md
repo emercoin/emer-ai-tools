@@ -22,15 +22,15 @@ operational checklist for *using* the tools.
 ## Prerequisites
 
 The MCP server must be configured (see `AGENTS.md` → Quickstart). It needs the
-gateway reachable at `GATEWAY_URL`. Auth is either a session JWT obtained with
-`login(github_token)`, or a pre-set `GATEWAY_JWT` env var.
+gateway reachable at `GATEWAY_URL`. Auth is a session JWT obtained with the
+device-flow `login()` + `login_poll()`, or a pre-set `GATEWAY_JWT` env var.
 
 ## Tools (emercoin-agent MCP)
 
 | Tool | Use it to |
 |------|-----------|
 | `node_status()` | check the node is synced before relying on reads |
-| `login(github_token)` | get a session JWT (GitHub identity = root of trust) |
+| `login()` + `login_poll(session_id)` | get a session JWT via GitHub device flow (GitHub identity = root of trust) |
 | `register_identity(address, metadata?)` | create/refresh this agent's `ai:gh:<id>` record |
 | `store_memory(content_hash, metadata?)` | record one memory/research hash |
 | `store_memory_batch(records)` | record many hashes in ONE atomic transaction |
@@ -39,7 +39,8 @@ gateway reachable at `GATEWAY_URL`. Auth is either a session JWT obtained with
 ## Standard flows
 
 ### 1. Establish identity (once)
-1. `login(<github_token>)` — establishes the agent under a GitHub identity.
+1. `login()` → show the returned `user_code` + `verification_uri` to the user;
+   after they authorize on GitHub, `login_poll(<session_id>)` caches the JWT.
 2. Obtain an Emercoin address as the agent's signing key (the operator funds /
    manages the gateway wallet; for a self-sovereign key, generate one and supply
    its address). You can register first and add/rotate the address later.
@@ -73,7 +74,7 @@ gateway reachable at `GATEWAY_URL`. Auth is either a session JWT obtained with
 
 ## If something fails
 
-- 401 / "not authenticated" → call `login` first (or set `GATEWAY_JWT`).
+- 401 / "not authenticated" → run `login()` + `login_poll()` first (or set `GATEWAY_JWT`).
 - 429 → you hit the per-minute write limit; batch your writes or wait.
 - `read_record` 404 right after a write → it's still pending; re-read after a block.
 - Check `node_status().synced` — reads of confirmed names need a synced node.

@@ -75,7 +75,8 @@ Two services, one responsibility each:
 | Tool | Auth | Purpose |
 |------|------|---------|
 | `node_status()` | no | node sync state |
-| `login(github_token)` | no | exchange a GitHub token for a session JWT |
+| `login()` | no | start GitHub device-flow login (returns a code to show the user) |
+| `login_poll(session_id)` | no | finish login after the user authorizes; caches the JWT |
 | `register_identity(address, metadata?)` | yes | create/refresh `ai:gh:<id>` |
 | `store_memory(content_hash, metadata?)` | yes | one memory record |
 | `store_memory_batch(records)` | yes | many records in one atomic transaction |

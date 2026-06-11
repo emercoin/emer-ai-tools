@@ -14,8 +14,8 @@
       (доверие важнее юрлица — слой 2 «надёжность без юрлица»).
 - [~] GitHub OAuth вместо raw-token login; JWT secret ≥32 байт. Device-flow +
       web-flow (за флагом) реализованы в edge; raw-token за `EDGE_DEV_LOGIN_ENABLED`.
-      Осталось: e2e device-flow с реальным client_id; прод web-callback на домене
-      (напр. ai.emercoin.com); MCP-tool `login()` через device-flow.
+      Device-flow проверен e2e с реальным client_id; MCP `login()`+`login_poll()`
+      через device-flow готовы. Осталось: прод web-callback на домене (ai.emercoin.com).
 - [ ] Опубликовать adapter-образ в реестр (`emercoin/agent-adapter:<tag>`) — чтобы
       репо exchanger'а затягивало его как `image:` (adapter+wallet как переиспользуемый узел).
 - [ ] Расширение identity-namespace за пределы GitHub: `ai:dns:<domain>`,

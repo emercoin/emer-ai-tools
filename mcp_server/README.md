@@ -8,7 +8,9 @@ layer; it delegates chain ops to the node adapter — see `docs/ARCHITECTURE.md`
 | Tool | Auth | Maps to |
 |------|------|---------|
 | `node_status()` | no | `GET /status` |
-| `login(github_token)` | no | `POST /auth/login` (caches JWT) |
+| `login()` | no | `POST /auth/github/device/start` (device flow; show code to user) |
+| `login_poll(session_id)` | no | `POST /auth/github/device/poll` (finish; caches JWT) |
+| `login_with_token(github_token)` | no | `POST /auth/login` (dev/CI fallback) |
 | `register_identity(address, metadata?)` | yes | `POST /nvs/identity` |
 | `store_memory(content_hash, metadata?)` | yes | `POST /nvs/mem` |
 | `store_memory_batch(records)` | yes | `POST /nvs/mem/batch` (atomic, one tx) |
