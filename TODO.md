@@ -25,6 +25,11 @@
       `ai:did:<method>:<id>` — нейтральные корни доверия.
 
 ### In Progress
+- [ ] **Node-образ через CI** (`emercoin/core`): воркфлоу `.github/workflows/publish-node.yml`
+      готов (триггер `node-v*`, amd64, версия из node/Dockerfile, dispatch→`<ver>-test`).
+      ⚠ публикует ОФИЦИАЛЬНЫЙ образ — перед релизным тегом прогнать `workflow_dispatch`
+      (`-test`) и сверить с текущим upstream. Node/Dockerfile на ubuntu:16.04 — возможно,
+      стоит обновить базу/добавить CMD перед перезаписью emercoin/core.
     
 
 ### Done ✓

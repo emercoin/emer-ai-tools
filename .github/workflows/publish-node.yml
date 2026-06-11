@@ -1,0 +1,62 @@
+# Publish the Emercoin wallet/node image (emercoin/core) built from node/.
+#
+# Tag convention (keeps this disjoint from the REST-API pipeline, which uses v*):
+#   - push a tag `node-v*` (e.g. node-v0.8.5)  -> publishes emercoin/core:<ver> + latest
+#   - manual run (workflow_dispatch)           -> publishes emercoin/core:<ver>-test only
+#                                                 (a safe dry-run; never touches :latest)
+#
+# The Docker tag <ver> is read from EMER_DISTR_VERSION in node/Dockerfile, so the
+# image tag always matches the emercoind release actually built.
+#
+# amd64 only: node/Dockerfile downloads the x86_64 emercoind tarball.
+# Requires repo secrets DOCKERHUB_USERNAME + DOCKERHUB_TOKEN (write to emercoin org).
+#
+# WARNING: this publishes the OFFICIAL emercoin/core image. A `node-v*` release
+# overwrites emercoin/core:<ver> (and :latest) with whatever node/Dockerfile builds
+# now — verify with a workflow_dispatch (-test tag) first.
+name: Publish node image (emercoin/core)
+
+on:
+  push:
+    tags: ["node-v*"]
+  workflow_dispatch:
+
+env:
+  IMAGE: emercoin/core
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read emercoind version from node/Dockerfile
+        id: ver
+        run: echo "version=$(grep -oP 'EMER_DISTR_VERSION=\K[0-9.]+' node/Dockerfile)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Image metadata (tags + labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=${{ steps.ver.outputs.version }},enable=${{ startsWith(github.ref, 'refs/tags/node-v') }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/node-v') }}
+            type=raw,value=${{ steps.ver.outputs.version }}-test,enable=${{ github.event_name == 'workflow_dispatch' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./node
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

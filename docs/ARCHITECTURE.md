@@ -89,12 +89,25 @@ edge/app/            agent-facing IAM. HTTP client of the adapter.
 mcp_server/server.py thin MCP client of the edge HTTP API
 ```
 
-## Published image (reuse)
-The adapter is published to Docker Hub as **`emercoin/rest-api`** (CI:
-`.github/workflows/publish-rest-api.yml`, on `v*` tags). It's a generic RPC↔REST
-front for an Emercoin wallet — nothing agent-specific — so other services pull it
-instead of vendoring the source. The USDT→EMC exchanger (separate repo) runs it
-alongside `emercoin/core`:
+## Published images (CI → Docker Hub)
+Two independent images, each with its own release tag so one tag never triggers
+both pipelines:
+
+| Image | Source | Workflow | Release tag | Arch |
+|-------|--------|----------|-------------|------|
+| `emercoin/rest-api` | `adapter/` | `publish-rest-api.yml` | `v*` (e.g. `v0.0.1`) | amd64+arm64 |
+| `emercoin/core` | `node/` | `publish-node.yml` | `node-v*` (e.g. `node-v0.8.5`) | amd64 |
+
+- **`emercoin/rest-api`** — the generic RPC↔REST front for the wallet (nothing
+  agent-specific), so other services pull it instead of vendoring source.
+- **`emercoin/core`** — the wallet/node itself; `node-v*` publishes
+  `emercoin/core:<EMER_DISTR_VERSION>` + `latest` (the tag is read from
+  `node/Dockerfile`). amd64 only (the emercoind tarball is x86_64). A manual
+  `workflow_dispatch` publishes only a `<ver>-test` tag for verification — it
+  never overwrites `:latest`. **A `node-v*` release overwrites the official
+  image; verify the `-test` build first.**
+
+The USDT→EMC exchanger (separate repo) runs both:
 ```
 image: emercoin/core:0.8.5      # the wallet/node
 image: emercoin/rest-api:0.0.1  # RPC↔REST in front of it
