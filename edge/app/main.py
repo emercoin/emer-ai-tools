@@ -10,7 +10,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
 from . import names
@@ -18,6 +18,8 @@ from .auth import Principal, current_principal, issue_jwt, resolve_github_token
 from .challenge import ChallengeStore
 from .client import AdapterClient, AdapterError
 from .config import settings
+from .github import GitHubOAuth
+from .oauth_state import OAuthStateStore
 from .ratelimit import RateLimiter
 
 
@@ -26,10 +28,16 @@ async def lifespan(app: FastAPI):
     app.state.adapter = AdapterClient(settings.adapter_url, settings.adapter_key)
     app.state.ratelimiter = RateLimiter(settings.redis_url)
     app.state.challenges = ChallengeStore(settings.redis_url)
+    app.state.github = GitHubOAuth(
+        settings.github_client_id, settings.github_client_secret, settings.github_redirect_uri
+    )
+    app.state.oauth = OAuthStateStore(settings.redis_url)
     yield
     await app.state.adapter.aclose()
     await app.state.ratelimiter.aclose()
     await app.state.challenges.aclose()
+    await app.state.github.aclose()
+    await app.state.oauth.aclose()
 
 
 app = FastAPI(title="Emercoin Agent Gateway (edge)", version="0.0.1", lifespan=lifespan)
@@ -52,6 +60,14 @@ def get_challenges(request: Request) -> ChallengeStore:
     return request.app.state.challenges
 
 
+def get_github(request: Request) -> GitHubOAuth:
+    return request.app.state.github
+
+
+def get_oauth(request: Request) -> OAuthStateStore:
+    return request.app.state.oauth
+
+
 # --- schemas ---------------------------------------------------------------
 
 class LoginRequest(BaseModel):
@@ -64,6 +80,19 @@ class TokenResponse(BaseModel):
     github_id: int
     github_login: str
     tariff: str
+
+
+class DeviceStartResponse(BaseModel):
+    user_code: str = Field(..., description="Show this to the user to type at verification_uri")
+    verification_uri: str
+    verification_uri_complete: str | None = None
+    session_id: str = Field(..., description="Poll /auth/github/device/poll with this")
+    interval: int = Field(..., description="Seconds to wait between polls")
+    expires_in: int
+
+
+class DevicePollRequest(BaseModel):
+    session_id: str
 
 
 class IdentityRequest(BaseModel):
@@ -174,8 +203,112 @@ async def status(adapter: AdapterClient = Depends(get_adapter)) -> dict:
 
 @app.post("/auth/login", response_model=TokenResponse)
 async def login(req: LoginRequest) -> TokenResponse:
-    """Bootstrap login via GitHub identity (human / first-time registration)."""
+    """Dev/CI bootstrap: caller already holds a GitHub token. Disabled in prod
+    (use the device flow); gated behind EDGE_DEV_LOGIN_ENABLED."""
+    if not settings.dev_login_enabled:
+        raise HTTPException(status_code=404, detail="raw-token login disabled; use /auth/github/device")
     github_id, github_login = await resolve_github_token(req.github_token)
+    token = issue_jwt(github_id, github_login)
+    return TokenResponse(
+        access_token=token, github_id=github_id, github_login=github_login, tariff="free"
+    )
+
+
+# --- GitHub login: device flow (headless, primary) -------------------------
+
+@app.post("/auth/github/device/start", response_model=DeviceStartResponse)
+async def github_device_start(
+    github: GitHubOAuth = Depends(get_github), oauth: OAuthStateStore = Depends(get_oauth)
+) -> DeviceStartResponse:
+    """Begin GitHub device-flow login. Returns a code the user types at GitHub."""
+    if not settings.github_client_id:
+        raise HTTPException(status_code=503, detail="GitHub login not configured")
+    data = await github.device_code()
+    if "device_code" not in data:
+        raise HTTPException(status_code=502, detail=f"github device error: {data}")
+    session_id = await oauth.put_device(data["device_code"], int(data.get("expires_in", 900)))
+    return DeviceStartResponse(
+        user_code=data["user_code"],
+        verification_uri=data["verification_uri"],
+        verification_uri_complete=data.get("verification_uri_complete"),
+        session_id=session_id,
+        interval=int(data.get("interval", 5)),
+        expires_in=int(data.get("expires_in", 900)),
+    )
+
+
+@app.post("/auth/github/device/poll")
+async def github_device_poll(
+    req: DevicePollRequest,
+    github: GitHubOAuth = Depends(get_github),
+    oauth: OAuthStateStore = Depends(get_oauth),
+) -> JSONResponse:
+    """Poll for completion. 200 + token once authorized; 202 while pending."""
+    device_code = await oauth.get_device(req.session_id)
+    if not device_code:
+        raise HTTPException(status_code=410, detail="session expired; start a new device login")
+    result = await github.poll_token(device_code)
+
+    error = result.get("error")
+    if error == "authorization_pending":
+        return JSONResponse(status_code=202, content={"status": "pending"})
+    if error == "slow_down":
+        return JSONResponse(
+            status_code=202, content={"status": "slow_down", "interval": int(result.get("interval", 10))}
+        )
+    if error in ("expired_token", "incorrect_device_code"):
+        await oauth.drop_device(req.session_id)
+        raise HTTPException(status_code=410, detail="device code expired; start a new device login")
+    if error == "access_denied":
+        await oauth.drop_device(req.session_id)
+        raise HTTPException(status_code=403, detail="authorization denied by the user")
+    if error:
+        raise HTTPException(status_code=502, detail=f"github error: {error}")
+
+    access_token = result.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=502, detail="github returned no access token")
+    await oauth.drop_device(req.session_id)
+    github_id, github_login = await github.fetch_user(access_token)
+    token = issue_jwt(github_id, github_login)
+    return JSONResponse(
+        status_code=200,
+        content=TokenResponse(
+            access_token=token, github_id=github_id, github_login=github_login, tariff="free"
+        ).model_dump(),
+    )
+
+
+# --- GitHub login: web authorization-code flow (browser, opt-in) -----------
+
+@app.get("/auth/github/start")
+async def github_web_start(
+    github: GitHubOAuth = Depends(get_github), oauth: OAuthStateStore = Depends(get_oauth)
+) -> RedirectResponse:
+    """Redirect the browser to GitHub's consent screen (web flow)."""
+    if not settings.web_login_enabled:
+        raise HTTPException(status_code=404, detail="web login disabled; use /auth/github/device")
+    state = await oauth.issue_state()
+    return RedirectResponse(url=github.authorize_url(state))
+
+
+@app.get("/auth/github/callback", response_model=TokenResponse)
+async def github_web_callback(
+    code: str,
+    state: str,
+    github: GitHubOAuth = Depends(get_github),
+    oauth: OAuthStateStore = Depends(get_oauth),
+) -> TokenResponse:
+    """GitHub redirects here with ?code&state; exchange it for a session JWT."""
+    if not settings.web_login_enabled:
+        raise HTTPException(status_code=404, detail="web login disabled")
+    if not await oauth.consume_state(state):
+        raise HTTPException(status_code=400, detail="invalid or expired state")
+    result = await github.exchange_code(code)
+    access_token = result.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=401, detail=f"code exchange failed: {result.get('error', 'unknown')}")
+    github_id, github_login = await github.fetch_user(access_token)
     token = issue_jwt(github_id, github_login)
     return TokenResponse(
         access_token=token, github_id=github_id, github_login=github_login, tariff="free"

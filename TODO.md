@@ -12,7 +12,12 @@
 - [ ] Лимит расхода EMC/час + alerting на аномальный темп записей.
 - [ ] Ротация операционного адреса; публичная политика хранения средств
       (доверие важнее юрлица — слой 2 «надёжность без юрлица»).
-- [ ] GitHub App/OAuth вместо raw-token login; JWT secret ≥32 байт.
+- [~] GitHub OAuth вместо raw-token login; JWT secret ≥32 байт. Device-flow +
+      web-flow (за флагом) реализованы в edge; raw-token за `EDGE_DEV_LOGIN_ENABLED`.
+      Осталось: e2e device-flow с реальным client_id; прод web-callback на домене
+      (напр. ai.emercoin.com); MCP-tool `login()` через device-flow.
+- [ ] Опубликовать adapter-образ в реестр (`emercoin/agent-adapter:<tag>`) — чтобы
+      репо exchanger'а затягивало его как `image:` (adapter+wallet как переиспользуемый узел).
 - [ ] Расширение identity-namespace за пределы GitHub: `ai:dns:<domain>`,
       `ai:did:<method>:<id>` — нейтральные корни доверия.
 

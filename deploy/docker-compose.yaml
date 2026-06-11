@@ -35,6 +35,9 @@ x-edge: &edge
 x-edge-env: &edge-env
   EDGE_ADAPTER_URL: http://emer-adapter:8000
   EDGE_REDIS_URL: redis://redis:6379/0
+  # GitHub OAuth App — from deploy/.env (pass with --env-file deploy/.env).
+  EDGE_GITHUB_CLIENT_ID: ${EDGE_GITHUB_CLIENT_ID:-}
+  EDGE_GITHUB_CLIENT_SECRET: ${EDGE_GITHUB_CLIENT_SECRET:-}
 
 services:
   emc:
@@ -75,6 +78,9 @@ services:
       <<: *edge-env
       EDGE_ADAPTER_KEY: ""
       EDGE_JWT_SECRET: dev-secret-change-me
+      EDGE_DEV_LOGIN_ENABLED: "true"     # keeps /auth/login (raw token) for CI/e2e
+      EDGE_WEB_LOGIN_ENABLED: "true"     # web flow on localhost callback for testing
+      EDGE_GITHUB_REDIRECT_URI: http://localhost:8000/auth/github/callback
     depends_on: [redis]
 
   # --- prod: adapter hidden, shared-secret gate, auto-restart -----------------
@@ -97,5 +103,9 @@ services:
       # Must equal ADAPTER_INTERNAL_KEY; both REQUIRED in prod (deploy/.env).
       EDGE_ADAPTER_KEY: ${ADAPTER_INTERNAL_KEY:-}
       EDGE_JWT_SECRET: ${EDGE_JWT_SECRET:-}
+      EDGE_DEV_LOGIN_ENABLED: "false"
+      # Web flow needs a public HTTPS callback (a domain); off until then.
+      EDGE_WEB_LOGIN_ENABLED: ${EDGE_WEB_LOGIN_ENABLED:-false}
+      EDGE_GITHUB_REDIRECT_URI: ${EDGE_GITHUB_REDIRECT_URI:-}
     restart: unless-stopped
     depends_on: [redis]
