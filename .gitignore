@@ -3,6 +3,8 @@ lib
 share
 .emercoin
 venv
+.venv
+*/.venv
 .idea/
 bin
 wallet.dat
