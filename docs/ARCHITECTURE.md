@@ -89,6 +89,17 @@ edge/app/            agent-facing IAM. HTTP client of the adapter.
 mcp_server/server.py thin MCP client of the edge HTTP API
 ```
 
+## Published image (reuse)
+The adapter is published to Docker Hub as **`emercoin/rest-api`** (CI:
+`.github/workflows/publish-rest-api.yml`, on `v*` tags). It's a generic RPC↔REST
+front for an Emercoin wallet — nothing agent-specific — so other services pull it
+instead of vendoring the source. The USDT→EMC exchanger (separate repo) runs it
+alongside `emercoin/core`:
+```
+image: emercoin/core:0.8.5      # the wallet/node
+image: emercoin/rest-api:0.0.1  # RPC↔REST in front of it
+```
+
 ## Adapter endpoints (internal REST, no user auth)
 - `GET  /info`, `GET /status`, `GET /` — node info / sync / aggregated state
 - `POST /nvs`, `POST /nvs/batch` — generic create/update (name chosen by caller)

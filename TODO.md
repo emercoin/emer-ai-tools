@@ -16,8 +16,11 @@
       web-flow (за флагом) реализованы в edge; raw-token за `EDGE_DEV_LOGIN_ENABLED`.
       Device-flow проверен e2e с реальным client_id; MCP `login()`+`login_poll()`
       через device-flow готовы. Осталось: прод web-callback на домене (ai.emercoin.com).
-- [ ] Опубликовать adapter-образ в реестр (`emercoin/agent-adapter:<tag>`) — чтобы
-      репо exchanger'а затягивало его как `image:` (adapter+wallet как переиспользуемый узел).
+- [~] Публикация adapter-образа как `emercoin/rest-api` (Docker Hub) — CI
+      `.github/workflows/publish-rest-api.yml` на тег `v*`; standalone-сборка из
+      `./adapter` проверена (healthz/docs). Осталось: завести repo-секреты
+      DOCKERHUB_USERNAME + DOCKERHUB_TOKEN и запушить тег `v0.0.1` (или ручной
+      workflow_dispatch → latest), чтобы образ реально лёг в реестр.
 - [ ] Расширение identity-namespace за пределы GitHub: `ai:dns:<domain>`,
       `ai:did:<method>:<id>` — нейтральные корни доверия.
 
