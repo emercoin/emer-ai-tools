@@ -90,14 +90,19 @@ mcp_server/server.py thin MCP client of the edge HTTP API
 ```
 
 ## Published images (CI → Docker Hub)
-Three independent images, each with its own release tag so one tag never triggers
-another's pipeline:
+Four independent images, each with its own release tag so one tag never triggers
+another's pipeline. Image workflows also build `:latest` on a push to `main` that
+touches their source dir (path-filtered), so small fixes ship without a tag.
 
 | Image | Source | Workflow | Release tag | Arch |
 |-------|--------|----------|-------------|------|
 | `emercoin/rest-api` | `adapter/` | `publish-rest-api.yml` | `rest-api-v*` (e.g. `rest-api-v0.0.1`) | amd64+arm64 |
 | `emercoin/edge` | `edge/` | `publish-edge.yml` | `edge-v*` (e.g. `edge-v0.0.1`) | amd64+arm64 |
+| `emercoin/mcp` | `mcp_server/` | `publish-mcp.yml` | `mcp-v*` (e.g. `mcp-v0.1.0`) | amd64+arm64 |
 | `emercoin/core` | `node/` | `publish-node.yml` | `node-v*` (e.g. `node-v0.8.5`) | amd64 |
+
+`emercoin/mcp` is the stdio MCP server (referenced by `mcp_server/server.json` in
+the official MCP registry; agents run it via `docker run -i`).
 
 - **`emercoin/rest-api`** — the generic RPC↔REST front for the wallet (nothing
   agent-specific), so other services pull it instead of vendoring source.

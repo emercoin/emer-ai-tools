@@ -1,0 +1,53 @@
+# Publish the MCP server image (emercoin/mcp) referenced by mcp_server/server.json
+# in the official MCP registry. Stdio MCP server; agents run it via `docker run -i`.
+#
+# Builds on push to main touching mcp_server/ (moves :latest + :sha) and on
+# mcp-v* tags (pinned version + :latest). amd64+arm64 so it runs on Apple Silicon.
+name: Publish MCP image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mcp_server/**"
+      - ".github/workflows/publish-mcp.yml"
+    tags: ["mcp-v*"]
+  workflow_dispatch:
+
+env:
+  IMAGE: emercoin/mcp
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Image metadata (tags + labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=match,pattern=mcp-v(.*),group=1
+            type=match,pattern=mcp-v(\d+\.\d+),group=1
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/mcp-v') || github.event_name == 'workflow_dispatch' }}
+            type=sha,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./mcp_server
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

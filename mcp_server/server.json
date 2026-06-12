@@ -1,0 +1,27 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.emercoin/emercoin-agent",
+  "title": "Emercoin Agent",
+  "description": "On-chain identity and durable memory for AI agents on the Emercoin blockchain (NVS), via the ai.emercoin.com gateway: register a GitHub-rooted identity and store verifiable hashes of research and memory.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/emercoin/emer-ai-tools",
+    "source": "github",
+    "subfolder": "mcp_server"
+  },
+  "websiteUrl": "https://ai.emercoin.com",
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "docker.io/emercoin/mcp:0.1.0",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "GATEWAY_URL",
+          "description": "Base URL of the edge gateway the MCP server talks to",
+          "default": "https://ai.emercoin.com"
+        }
+      ]
+    }
+  ]
+}
