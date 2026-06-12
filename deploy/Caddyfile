@@ -1,12 +1,28 @@
-# Reverse proxy for the edge, fronted by Cloudflare (proxied).
-# Serves edge on BOTH http:// (no auto-redirect) and :443 (tls internal) so it
-# works under CF "Flexible" (origin :80) and a per-host "Full" rule (origin :443).
-# Origin :80/:443 are firewalled to Cloudflare IP ranges; direct-IP hits are dropped.
+# Front for ai.emercoin.com behind Cloudflare (proxied).
+#  - Static site corpus (index, login, css in ../site) is served directly and is
+#    cacheable by Cloudflare; extensionless paths resolve via try_files.
+#  - Everything else (the API: /auth, /nvs, /me, /status, /docs, …) is proxied to
+#    the edge.
+# The same logic is imported for http:// (CF "Flexible", origin :80) and :443
+# (tls internal; CF "Full", origin :443). Origin ports are firewalled to CF.
+(app) {
+	encode gzip
+	root * /srv/site
+	@static path / /index.html /login /login.html /style.css
+	handle @static {
+		try_files {path} {path}.html
+		file_server
+	}
+	handle {
+		reverse_proxy emer-edge:8000
+	}
+}
+
 http://ai.emercoin.com {
-	reverse_proxy emer-edge:8000
+	import app
 }
 
 ai.emercoin.com {
 	tls internal
-	reverse_proxy emer-edge:8000
+	import app
 }

@@ -281,14 +281,6 @@ async def github_device_poll(
 
 # --- GitHub login: web authorization-code flow (browser, opt-in) -----------
 
-@app.get("/login", response_class=HTMLResponse)
-async def login_page() -> HTMLResponse:
-    """Lightweight branded landing page with the 'Continue with GitHub' button."""
-    if not settings.web_login_enabled:
-        raise HTTPException(status_code=404, detail="web login disabled; use device flow")
-    return HTMLResponse(web.login_page())
-
-
 @app.get("/auth/github/start")
 async def github_web_start(
     github: GitHubOAuth = Depends(get_github), oauth: OAuthStateStore = Depends(get_oauth)

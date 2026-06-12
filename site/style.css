@@ -1,0 +1,57 @@
+/* emercoin.com brand — shared by the static pages (index, login) and the edge's
+   server-rendered result/error pages. Purple #4A3777 + gold #FFC033 on light purple. */
+:root{
+  --purple:#4A3777; --purple-mid:#7B6696; --field:#f6f2fb; --gold:#FFC033; --ink:#404750;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color:var(--ink);background:var(--field);
+  display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;
+}
+.card{
+  background:#fff;width:100%;max-width:440px;border-radius:16px;padding:40px 36px;
+  box-shadow:0 10px 40px rgba(74,55,119,.14);border:1px solid #e4d6f5;text-align:center;
+}
+.brand{font-size:30px;font-weight:800;letter-spacing:-.5px;margin-bottom:18px;color:var(--purple)}
+.brand span{color:var(--purple-mid)}
+.brand b{color:var(--gold);font-weight:800}
+.accent{height:4px;width:54px;background:var(--gold);border-radius:3px;margin:0 auto 24px}
+h1{font-size:22px;margin:0 0 8px;color:var(--purple)}
+p.sub{margin:0 0 28px;color:var(--purple-mid);font-size:14px;line-height:1.55}
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  padding:13px 18px;border-radius:10px;border:none;cursor:pointer;
+  font-size:15px;font-weight:600;text-decoration:none;
+  background:var(--purple);color:#fff;transition:background .15s;
+}
+.btn:hover{background:#3b2c61}
+.btn svg{width:20px;height:20px;fill:#fff}
+.btn.ghost{background:#fff;color:var(--purple);border:1px solid #e4d6f5}
+.btn.ghost:hover{background:var(--field)}
+.links{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.foot{margin-top:22px;font-size:12px;color:#b09cc9;letter-spacing:.3px}
+ul.feat{text-align:left;color:var(--ink);font-size:14px;line-height:1.7;margin:0 0 24px;padding-left:20px}
+ul.feat b{color:var(--purple)}
+/* result page */
+.badge{
+  display:inline-flex;align-items:center;gap:8px;background:var(--field);color:var(--purple);
+  border-radius:999px;padding:6px 14px;font-size:14px;font-weight:600;margin-bottom:6px;
+}
+.tokbox{margin:18px 0 6px;text-align:left}
+.tokbox label{display:block;font-size:12px;color:var(--purple-mid);margin-bottom:6px}
+textarea.tok{
+  width:100%;height:84px;resize:none;border:1px solid #e4d6f5;border-radius:10px;
+  padding:10px 12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12px;color:var(--ink);background:var(--field);word-break:break-all;
+}
+.copy{
+  margin-top:8px;width:100%;padding:10px;border-radius:8px;border:1px solid var(--purple);
+  background:#fff;color:var(--purple);font-weight:600;cursor:pointer;font-size:14px;
+}
+.copy:hover{background:var(--field)}
+.meta{font-size:12px;color:var(--purple-mid);margin-top:14px}
+.err h1{color:#b20f03}
+a.back{display:inline-block;margin-top:18px;color:var(--purple-mid);font-size:13px;text-decoration:none}
+a.back:hover{text-decoration:underline}
