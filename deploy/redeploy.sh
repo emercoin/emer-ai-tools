@@ -13,10 +13,11 @@ git -C "$REPO" pull --ff-only
 cd "$REPO/deploy"
 $COMPOSE pull
 $COMPOSE up -d --remove-orphans
-# Caddyfile is bind-mounted, so `up -d` won't recreate caddy on a config-only
-# change — reload it explicitly (also picks up new static files in ../site).
-docker exec emer-caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null \
-  || echo "caddy reload skipped (container not running yet)"
+# The Caddyfile is a single-file bind mount: when git pull replaces it the inode
+# changes and the running container keeps the old one (a `caddy reload` would just
+# re-read the stale inode). Force-recreate caddy so it re-binds the current file.
+# (Static files in ../site are a directory mount and update live — no recreate.)
+$COMPOSE up -d --force-recreate caddy
 docker image prune -f
 echo "--- status ---"
 $COMPOSE ps
