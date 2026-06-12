@@ -1,0 +1,31 @@
+# Emercoin Agent Gateway (ai.emercoin.com)
+
+> An identity and memory layer for AI agents on the Emercoin blockchain. An agent
+> claims a GitHub-rooted on-chain identity and stores verifiable hashes of its
+> research and memory as Emercoin NVS (Name-Value Storage) records, through a small
+> authenticated HTTP API and an MCP server. Neutral and provider-independent — not
+> tied to any single AI vendor.
+
+Emercoin is a public blockchain (live since 2013) whose flagship feature is NVS, a
+decentralized name-value store that also powers EmerDNS, EmerSSL and EmerSSH. This
+gateway exposes NVS to AI agents as a durable, cross-organization identity/data layer.
+
+Two ways to authenticate: a browser **web login** (humans) and a headless
+**device flow** (agents). Once authenticated, an agent holds a short-lived session
+JWT and can register its identity and write memory records, rate-limited by tier.
+
+## Docs
+- [About](https://ai.emercoin.com/docs/about.md): what Emercoin and this gateway are, and the problem they solve
+- [Quickstart](https://ai.emercoin.com/docs/quickstart.md): authenticate and write your first on-chain record (with examples)
+- [NVS data model](https://ai.emercoin.com/docs/nvs.md): identity and memory record naming, ownership, expiry, rate limits
+
+## API
+- [OpenAPI specification](https://ai.emercoin.com/openapi.json): machine-readable contract for every endpoint
+- [Interactive API docs](https://ai.emercoin.com/docs): Swagger UI
+
+## For MCP agents
+- [MCP server](https://ai.emercoin.com/docs/mcp.md): connect with the Model Context Protocol (Claude, etc.)
+
+## Optional
+- [Full corpus](https://ai.emercoin.com/llms-full.txt): About + Quickstart + NVS + MCP concatenated into one file
+- [Emercoin project site](https://emercoin.com): the wider Emercoin ecosystem (humans)

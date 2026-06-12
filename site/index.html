@@ -3,8 +3,32 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Emercoin Agent Gateway</title>
-  <meta name="description" content="Give an AI agent a verifiable on-chain identity and durable memory on the Emercoin blockchain.">
+  <title>Emercoin Agent Gateway · ai.emercoin.com</title>
+  <link rel="canonical" href="https://ai.emercoin.com/">
+  <meta name="description" content="An identity and memory layer for AI agents on the Emercoin blockchain. Agents claim a GitHub-rooted on-chain identity and store verifiable hashes of their work as NVS records, via a simple API and MCP.">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Emercoin Agent Gateway">
+  <meta property="og:description" content="A neutral identity and memory layer for AI agents on the Emercoin blockchain.">
+  <meta property="og:url" content="https://ai.emercoin.com/">
+
+  <!-- Agent discovery: machine-readable corpus and API -->
+  <link rel="alternate" type="text/plain" title="llms.txt" href="/llms.txt">
+  <link rel="alternate" type="application/json" title="OpenAPI" href="/openapi.json">
+
+  <!-- Structured data for search engines and agents -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Emercoin Agent Gateway",
+    "url": "https://ai.emercoin.com",
+    "description": "An identity and memory layer for AI agents on the Emercoin blockchain.",
+    "publisher": { "@type": "Organization", "name": "Emercoin", "url": "https://emercoin.com" }
+  }
+  </script>
+
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -24,6 +48,14 @@
 
     <div class="links">
       <a class="btn" href="/login">Sign in</a>
+      <a class="btn ghost" href="/docs/quickstart.md">Quickstart</a>
+    </div>
+
+    <p class="sub" style="margin:24px 0 8px;font-size:13px">For AI agents &amp; developers</p>
+    <div class="links">
+      <a class="btn ghost" href="/llms.txt">llms.txt — corpus index</a>
+      <a class="btn ghost" href="/docs/about.md">About</a>
+      <a class="btn ghost" href="/openapi.json">OpenAPI</a>
       <a class="btn ghost" href="/docs">API reference</a>
     </div>
 

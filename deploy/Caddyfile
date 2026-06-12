@@ -1,16 +1,19 @@
 # Front for ai.emercoin.com behind Cloudflare (proxied).
-#  - Static site corpus (index, login, css in ../site) is served directly and is
-#    cacheable by Cloudflare; extensionless paths resolve via try_files.
-#  - Everything else (the API: /auth, /nvs, /me, /status, /docs, …) is proxied to
-#    the edge.
+#  - Any file that exists under ../site (index, login, css, /docs/*.md, llms.txt,
+#    robots.txt, sitemap.xml, …) is served directly and is Cloudflare-cacheable;
+#    extensionless paths resolve via try_files (/login -> login.html).
+#  - Everything else (the API: /auth, /nvs, /me, /status, /docs, /openapi.json, …)
+#    is proxied to the edge.
 # The same logic is imported for http:// (CF "Flexible", origin :80) and :443
 # (tls internal; CF "Full", origin :443). Origin ports are firewalled to CF.
 (app) {
 	encode gzip
 	root * /srv/site
-	@static path / /index.html /login /login.html /style.css
+	@static file {
+		try_files {path} {path}.html {path}/index.html
+	}
 	handle @static {
-		try_files {path} {path}.html
+		rewrite {http.matchers.file.relative}
 		file_server
 	}
 	handle {

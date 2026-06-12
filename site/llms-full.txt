@@ -1,0 +1,252 @@
+# Emercoin Agent Gateway — full documentation corpus
+# Source: https://ai.emercoin.com/llms.txt
+
+# About the Emercoin Agent Gateway
+
+## What is Emercoin?
+
+Emercoin is an open-source public blockchain, live since 2013. Its flagship feature
+is **NVS — Name-Value Storage**: a decentralized, censorship-resistant key-value
+store written directly on-chain. NVS underpins several Emercoin services:
+
+- **EmerDNS** — decentralized DNS (top-level domains such as `.emc`, `.coin`, `.lib`, `.bazar`).
+- **EmerSSL** — passwordless certificate-based authentication.
+- **EmerSSH** — distribution of SSH keys and access policy.
+
+Each NVS record has a **name**, a **value**, an **owner address**, and an
+**expiration**. Records are created and updated by signed transactions, and the
+full history of a name is publicly verifiable. The coin is **EMC**.
+
+## What is this gateway?
+
+`ai.emercoin.com` turns Emercoin NVS into an **identity and memory layer for AI
+agents**. Instead of every AI vendor owning your agent's identity, an agent anchors
+its identity and the hashes of its work to a neutral public chain that no single
+company controls.
+
+An agent can:
+
+1. **Claim an identity** rooted in a GitHub account — the record `ai:gh:<github_id>`.
+2. **Store memory** — content hashes of research, artifacts, and decisions as
+   `ai:gh:<github_id>:mem:<hash>` records (the body lives off-chain; the chain holds
+   the verifiable fingerprint).
+3. **Prove who it is** later by signing a challenge with its address key.
+
+The gateway is a thin authenticated HTTP API in front of an Emercoin node. It does
+not expose raw wallet RPC; it enforces GitHub-rooted login, short-lived session
+JWTs, and per-tier rate limits.
+
+## Why a separate site from emercoin.com?
+
+`emercoin.com` is the human/ecosystem site. `ai.emercoin.com` is **agent-first**:
+human-readable, but primarily designed to be discovered and used by AI agents
+(Claude, GPT-class models, and others) — via a machine-readable API
+([OpenAPI](https://ai.emercoin.com/openapi.json)), an [MCP server](https://ai.emercoin.com/docs/mcp.md),
+and this documentation corpus indexed at [/llms.txt](https://ai.emercoin.com/llms.txt).
+
+## The bigger idea
+
+AI agents increasingly need a portable, verifiable identity and durable memory that
+outlive any one platform. A neutral blockchain — credible without a central
+custodian — is a natural substrate. GitHub is only the first identity root; the
+namespace is designed to grow (`ai:dns:<domain>`, `ai:did:<method>:<id>`, …).
+
+Next: [Quickstart](https://ai.emercoin.com/docs/quickstart.md) ·
+[NVS data model](https://ai.emercoin.com/docs/nvs.md)
+
+---
+
+# Quickstart
+
+Base URL: `https://ai.emercoin.com`. All chain-writing endpoints require a session
+JWT in the `Authorization: Bearer <token>` header. Reads are open.
+
+Check the node is healthy and synced:
+
+```bash
+curl https://ai.emercoin.com/status
+# {"version":"v0.8.5emc","blocks":...,"synced":true,...}
+```
+
+## 1. Authenticate
+
+### Option A — browser (humans)
+Open <https://ai.emercoin.com/login>, click **Continue with GitHub**, and copy the
+session token shown on the result page.
+
+### Option B — device flow (headless agents)
+No browser on the agent side. Start the flow, show the user a short code, then poll.
+
+```bash
+# Start — returns user_code, verification_uri, session_id, interval, expires_in
+curl -X POST https://ai.emercoin.com/auth/github/device/start
+
+# The user opens verification_uri (https://github.com/login/device) and enters user_code.
+
+# Poll until authorized — 202 while pending, 200 + access_token once done
+curl -X POST https://ai.emercoin.com/auth/github/device/poll \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id":"<session_id from start>"}'
+# 200 -> {"access_token":"<JWT>","github_id":...,"github_login":"...","tariff":"free"}
+```
+
+Save the `access_token`; it is your session JWT (short-lived).
+
+## 2. Confirm your identity
+
+```bash
+TOKEN=<your JWT>
+curl https://ai.emercoin.com/me -H "Authorization: Bearer $TOKEN"
+# {"github_id":...,"github_login":"...","tariff":"free"}
+```
+
+## 3. Write a memory record on-chain
+
+Store the hash of an artifact (the body stays off-chain; the chain holds the proof):
+
+```bash
+curl -X POST https://ai.emercoin.com/nvs/mem \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"content_hash":"<sha256-hex>","metadata":{"note":"research result"}}'
+# {"name":"ai:gh:<id>:mem:<hash>","result":"<txid>"}
+```
+
+## 4. Read it back
+
+```bash
+curl "https://ai.emercoin.com/nvs/ai:gh:<id>:mem:<hash>"
+# {"status":"pending",...}  immediately (in the mempool), then
+# {"status":"confirmed",...} once it lands in a block (~10 min)
+```
+
+## (Optional) Register your identity record
+
+Bind an Emercoin address to your GitHub identity so you can later prove control by
+signature (machine-speed agent login without a GitHub round-trip):
+
+```bash
+curl -X POST https://ai.emercoin.com/nvs/identity \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"address":"<your-emercoin-address>","metadata":{}}'
+# {"name":"ai:gh:<id>","result":"<txid>"}
+```
+
+Full machine-readable contract: [OpenAPI](https://ai.emercoin.com/openapi.json) ·
+prefer MCP? see the [MCP guide](https://ai.emercoin.com/docs/mcp.md) ·
+naming and limits: [NVS data model](https://ai.emercoin.com/docs/nvs.md)
+
+---
+
+# NVS data model
+
+Everything this gateway writes is an Emercoin **NVS record**: a `name` → `value`
+pair, owned by an address, with an expiry. Names use a namespace per identity to
+avoid collisions.
+
+## Names
+
+| Name | Purpose | Written by |
+|------|---------|------------|
+| `ai:gh:<github_id>` | **Identity** record — binds a GitHub id to an Emercoin address (+ metadata) | `POST /nvs/identity` |
+| `ai:gh:<github_id>:mem:<hash>` | **Memory** record — a content hash of an artifact (+ metadata) | `POST /nvs/mem` |
+
+`<github_id>` is the numeric GitHub user id carried in your session JWT — you can
+only write under your own namespace. `<hash>` is a content hash you choose
+(e.g. SHA-256 of the artifact body, which you store off-chain in IPFS or elsewhere).
+
+## Record value
+
+The value is a JSON object. For a memory record:
+
+```json
+{ "github_id": 3772563, "content_hash": "<hex>", "metadata": { "note": "..." } }
+```
+
+For an identity record it carries `github_id`, `github_login`, `address`, `metadata`.
+
+## Ownership
+
+The node wallet is shared and internal, so on-chain **all records are owned by the
+gateway hot-wallet address**. Agent ownership is asserted *inside the value*
+(`github_id`, and — once you register an identity — your address), anchored to
+GitHub and recorded on-chain. Control of the bound address can be proven later via
+the signature login (`POST /auth/challenge` → sign the nonce → `POST /auth/agent-login`).
+
+## Expiry
+
+Records are written with a default lifetime (currently **30 days**, reported as
+`days_added` on read). Re-write the record before it expires to extend it.
+
+## Reading
+
+`GET /nvs/<name>` returns:
+- `{"status":"pending", ...}` — the write is in the mempool, not yet in a block.
+- `{"status":"confirmed", ...}` — mined; includes `value`, `address`, `days_added`,
+  and (if a newer update is queued) a `pending_update` flag.
+
+Also useful: `GET /history/<name>` (full value history) and
+`GET /addresses/<address>/names` (all names an address owns).
+
+## Rate limits / tiers
+
+Writes are rate-limited per `github_id` with a sliding 60-second window. The
+**free tier** allows **10 NVS writes per minute**. Batch many memory records
+atomically in one transaction with `POST /nvs/mem/batch`.
+
+See the [Quickstart](https://ai.emercoin.com/docs/quickstart.md) for end-to-end
+examples and the [OpenAPI spec](https://ai.emercoin.com/openapi.json) for exact
+request/response schemas.
+
+---
+
+# Using the gateway over MCP
+
+For agents that speak the **Model Context Protocol** (e.g. Claude Desktop / Claude
+Code), the `emercoin-agent` MCP server wraps this gateway's HTTP API as tools, so
+the agent never has to craft raw HTTP requests.
+
+## Tools
+
+| Tool | What it does |
+|------|--------------|
+| `node_status` | node sync/height (`GET /status`) |
+| `login` | start GitHub device-flow login → returns a user code + URL |
+| `login_poll` | poll the device-flow until authorized → returns the session JWT |
+| `login_with_token` | dev fallback: exchange a raw GitHub token for a JWT |
+| `register_identity` | register the `ai:gh:<id>` identity record |
+| `store_memory` | write one memory record (`ai:gh:<id>:mem:<hash>`) |
+| `store_memory_batch` | write many memory records atomically |
+| `read_record` | read any NVS record |
+
+## Connect
+
+The server is a small stdio MCP server (Python) in the
+[emer-ai-tools repo](https://github.com/emercoin/emer-ai-tools) under `mcp_server/`.
+Point it at the public gateway with the `GATEWAY_URL` environment variable:
+
+```bash
+# from a checkout of the repo
+GATEWAY_URL=https://ai.emercoin.com
+
+# register with Claude Code (stdio, local scope)
+claude mcp add emercoin-agent -- \
+  uv run --directory /path/to/emer-ai-tools/mcp_server python server.py
+```
+
+(Set `GATEWAY_URL=https://ai.emercoin.com` in the server's environment; it defaults
+to `http://localhost:8000` for local development.)
+
+## Typical flow
+
+1. `node_status` — confirm the chain is synced.
+2. `login` — get a device code; the human authorizes it once at github.com/login/device.
+3. `login_poll` — receive the session JWT (held by the server for subsequent calls).
+4. `register_identity` (once) and `store_memory` / `store_memory_batch` (ongoing).
+5. `read_record` — verify what's on-chain.
+
+Prefer raw HTTP? Everything above is also available directly — see the
+[Quickstart](https://ai.emercoin.com/docs/quickstart.md) and the
+[OpenAPI spec](https://ai.emercoin.com/openapi.json).
+
+---
+

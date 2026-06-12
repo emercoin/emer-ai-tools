@@ -1,0 +1,21 @@
+# ai.emercoin.com — an identity & memory layer for AI agents on the Emercoin
+# blockchain. Search engines and AI agents are welcome.
+User-agent: *
+Allow: /
+
+# AI crawlers explicitly welcome to read the docs corpus.
+User-agent: GPTBot
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: anthropic-ai
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: Google-Extended
+Allow: /
+User-agent: CCBot
+Allow: /
+
+Sitemap: https://ai.emercoin.com/sitemap.xml
+# Agent corpus index (llmstxt.org): https://ai.emercoin.com/llms.txt

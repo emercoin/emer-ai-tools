@@ -13,6 +13,10 @@ git -C "$REPO" pull --ff-only
 cd "$REPO/deploy"
 $COMPOSE pull
 $COMPOSE up -d --remove-orphans
+# Caddyfile is bind-mounted, so `up -d` won't recreate caddy on a config-only
+# change — reload it explicitly (also picks up new static files in ../site).
+docker exec emer-caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null \
+  || echo "caddy reload skipped (container not running yet)"
 docker image prune -f
 echo "--- status ---"
 $COMPOSE ps
