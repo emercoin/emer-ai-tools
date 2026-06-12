@@ -3,7 +3,8 @@
 # main and reconciles itself to the new state — no inbound deploy channel, so the
 # origin stays firewalled to Cloudflare.
 #
-#   site/ or Caddyfile change   -> recreate caddy (single-file mount + new static)
+#   site/ change                -> nothing: a directory mount, Caddy serves it live
+#   Caddyfile change            -> recreate caddy (single-file mount, inode changes)
 #   compose change              -> re-apply the whole stack
 #   edge/adapter image changes  -> handled separately by Watchtower (on CI build)
 #
@@ -32,9 +33,10 @@ COMPOSE="docker compose -f docker-compose.droplet.yaml --env-file .env"
 if echo "$changed" | grep -qE '^deploy/docker-compose'; then
   $COMPOSE up -d --remove-orphans
 fi
-# Caddyfile is a single-file bind mount (inode changes on pull) and static files
-# in ../site changed -> recreate caddy to pick them up.
-if echo "$changed" | grep -qE '^(site/|deploy/Caddyfile|deploy/docker-compose)'; then
+# Caddyfile is a single-file bind mount: its inode changes on pull, so the running
+# container keeps the old config -> force-recreate. (site/ is a directory mount and
+# is served live, so site-only changes need no action.)
+if echo "$changed" | grep -qE '^deploy/Caddyfile'; then
   $COMPOSE up -d --force-recreate caddy
 fi
 
