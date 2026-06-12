@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     # Must match the adapter's ADAPTER_INTERNAL_KEY when that gate is enabled.
     adapter_key: str = ""
 
+    # Public base URL — the OAuth issuer advertised in the MCP /.well-known metadata.
+    public_url: str = "https://ai.emercoin.com"
+
     # Auth: self-contained session JWT (no agent registry; we trust GitHub ID).
     jwt_secret: str = "dev-insecure-change-me"
     jwt_ttl_seconds: int = 3600

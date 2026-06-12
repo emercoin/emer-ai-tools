@@ -17,6 +17,7 @@ from . import names, web
 from .auth import Principal, current_principal, issue_jwt, resolve_github_token
 from .mcp_app import configure as mcp_configure
 from .mcp_app import mcp as mcp_server
+from .mcp_app import oauth_provider as mcp_oauth
 from .challenge import ChallengeStore
 from .client import AdapterClient, AdapterError
 from .config import settings
@@ -38,7 +39,7 @@ async def lifespan(app: FastAPI):
     app.state.stats = Stats(settings.redis_url)
     # Remote MCP (/mcp) reuses the same adapter + rate limiter + stats; its session
     # manager must run for the streamable-http transport to work.
-    mcp_configure(app.state.adapter, app.state.ratelimiter, app.state.stats)
+    mcp_configure(app.state.adapter, app.state.ratelimiter, app.state.stats, app.state.github)
     async with mcp_server.session_manager.run():
         yield
     await app.state.adapter.aclose()
@@ -50,10 +51,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Emercoin Agent Gateway (edge)", version="0.0.1", lifespan=lifespan)
-
-# Remote MCP server (Streamable HTTP) for agents that speak MCP — same ops as the
-# REST API; tools read the Authorization bearer token per call. Endpoint: /mcp
-app.mount("/mcp", mcp_server.streamable_http_app())
 
 
 @app.exception_handler(AdapterError)
@@ -319,8 +316,16 @@ async def github_web_callback(
     github: GitHubOAuth = Depends(get_github),
     oauth: OAuthStateStore = Depends(get_oauth),
 ) -> HTMLResponse:
-    """GitHub redirects the browser here with ?code&state; exchange it for a session
-    JWT and render a branded result page (errors render a styled page too)."""
+    """GitHub redirects the browser here with ?code&state. Shared by two flows:
+    the MCP OAuth flow (state owned by the MCP provider → hand back to the client)
+    and the browser web-login flow (render a branded result page)."""
+    # MCP OAuth flow: the provider owns this state — finish it and 302 back to the
+    # MCP client's redirect_uri with our authorization code. (Not gated by web login.)
+    if state and mcp_oauth.owns_state(state):
+        if error or not code:
+            return HTMLResponse(web.error_page(error or "authorization failed"), status_code=400)
+        return RedirectResponse(await mcp_oauth.complete_github(code, state), status_code=302)
+
     if not settings.web_login_enabled:
         return HTMLResponse(web.error_page("Web login is disabled."), status_code=404)
     if error or not code or not state:
@@ -465,3 +470,10 @@ async def address_names(address: str, adapter: AdapterClient = Depends(get_adapt
 async def read_nvs(name: str, adapter: AdapterClient = Depends(get_adapter)) -> dict:
     """Read an NVS record (confirmed from the name DB, or `pending` from mempool)."""
     return await adapter.read(name)
+
+
+# Remote MCP server (Streamable HTTP) for agents that speak MCP. Mounted LAST and at
+# root so its OAuth routes (/authorize, /token, /register, /.well-known/*) and the
+# /mcp transport sit at the domain root the spec expects, while every edge route
+# above is matched first; only unmatched paths fall through to the MCP app.
+app.mount("/", mcp_server.streamable_http_app())
