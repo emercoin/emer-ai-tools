@@ -1,0 +1,310 @@
+{
+  "serverInfo": {
+    "name": "emercoin-agent",
+    "version": "0.2.0"
+  },
+  "authentication": {
+    "required": true,
+    "schemes": [
+      "oauth2"
+    ]
+  },
+  "tools": [
+    {
+      "name": "node_status",
+      "title": "Node status",
+      "description": "Emercoin node version, block height and chain sync status.",
+      "inputSchema": {
+        "properties": {},
+        "title": "node_statusArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "version": {
+            "default": null,
+            "title": "Version",
+            "type": "string"
+          },
+          "blocks": {
+            "default": null,
+            "title": "Blocks",
+            "type": "integer"
+          },
+          "headers": {
+            "default": null,
+            "title": "Headers",
+            "type": "integer"
+          },
+          "verificationprogress": {
+            "default": null,
+            "title": "Verificationprogress",
+            "type": "number"
+          },
+          "connections": {
+            "default": null,
+            "title": "Connections",
+            "type": "integer"
+          },
+          "synced": {
+            "default": null,
+            "title": "Synced",
+            "type": "boolean"
+          }
+        },
+        "title": "NodeStatus",
+        "type": "object"
+      },
+      "annotations": {
+        "title": "Node status",
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "read_record",
+      "title": "Read NVS record",
+      "description": "Read an Emercoin NVS record by its full name. Returns the confirmed record,\n    or a `pending` record if the write is still in the mempool.",
+      "inputSchema": {
+        "properties": {
+          "name": {
+            "description": "Full NVS record name, e.g. 'ai:gh:<github_id>:mem:<sha256-hex>'.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "read_recordArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "status": {
+            "default": null,
+            "title": "Status",
+            "type": "string"
+          },
+          "name": {
+            "default": null,
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "default": null,
+            "title": "Value",
+            "type": "string"
+          },
+          "txid": {
+            "default": null,
+            "title": "Txid",
+            "type": "string"
+          },
+          "time": {
+            "default": null,
+            "title": "Time",
+            "type": "integer"
+          },
+          "address": {
+            "default": null,
+            "title": "Address",
+            "type": "string"
+          },
+          "address_is_mine": {
+            "default": null,
+            "title": "Address Is Mine",
+            "type": "string"
+          },
+          "operation": {
+            "default": null,
+            "title": "Operation",
+            "type": "string"
+          },
+          "days_added": {
+            "default": null,
+            "title": "Days Added",
+            "type": "integer"
+          },
+          "pending_update": {
+            "default": null,
+            "title": "Pending Update",
+            "type": "boolean"
+          },
+          "pending": {
+            "additionalProperties": true,
+            "default": null,
+            "title": "Pending",
+            "type": "object"
+          }
+        },
+        "title": "NvsRecord",
+        "type": "object"
+      },
+      "annotations": {
+        "title": "Read NVS record",
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "whoami",
+      "title": "Who am I",
+      "description": "Return your authenticated GitHub-rooted identity (id, login, tariff).",
+      "inputSchema": {
+        "properties": {},
+        "title": "whoamiArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "github_id": {
+            "title": "Github Id",
+            "type": "integer"
+          },
+          "github_login": {
+            "title": "Github Login",
+            "type": "string"
+          },
+          "tariff": {
+            "title": "Tariff",
+            "type": "string"
+          }
+        },
+        "required": [
+          "github_id",
+          "github_login",
+          "tariff"
+        ],
+        "title": "Identity",
+        "type": "object"
+      },
+      "annotations": {
+        "title": "Who am I",
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "register_identity",
+      "title": "Register identity",
+      "description": "Register or rotate your on-chain identity record `ai:gh:<github_id>`, binding\n    an Emercoin address to your GitHub identity. Returns the name and transaction id.",
+      "inputSchema": {
+        "properties": {
+          "address": {
+            "description": "Your Emercoin address to bind to your GitHub identity (the anchor for signature login).",
+            "title": "Address",
+            "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional free-form JSON metadata to store with the identity record.",
+            "title": "Metadata"
+          }
+        },
+        "required": [
+          "address"
+        ],
+        "title": "register_identityArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "txid": {
+            "title": "Txid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "txid"
+        ],
+        "title": "WriteResult",
+        "type": "object"
+      },
+      "annotations": {
+        "title": "Register identity",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "store_memory",
+      "title": "Store memory",
+      "description": "Store a memory record `ai:gh:<github_id>:mem:<content_hash>` on-chain \u2014 a\n    verifiable fingerprint of an artifact. Returns the name and transaction id.",
+      "inputSchema": {
+        "properties": {
+          "content_hash": {
+            "description": "Content hash (e.g. SHA-256 hex) of the artifact/memory; the body itself is stored off-chain.",
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional free-form JSON metadata (note, source, tags, \u2026).",
+            "title": "Metadata"
+          }
+        },
+        "required": [
+          "content_hash"
+        ],
+        "title": "store_memoryArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "txid": {
+            "title": "Txid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "txid"
+        ],
+        "title": "WriteResult",
+        "type": "object"
+      },
+      "annotations": {
+        "title": "Store memory",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}
