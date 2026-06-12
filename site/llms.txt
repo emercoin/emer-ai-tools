@@ -24,7 +24,8 @@ JWT and can register its identity and write memory records, rate-limited by tier
 - [Interactive API docs](https://ai.emercoin.com/docs): Swagger UI
 
 ## For MCP agents
-- [MCP server](https://ai.emercoin.com/docs/mcp.md): connect with the Model Context Protocol (Claude, etc.)
+- [MCP guide](https://ai.emercoin.com/docs/mcp.md): connect via the Model Context Protocol (Claude, etc.)
+- Hosted remote MCP — Streamable HTTP, no install: `https://ai.emercoin.com/mcp`
 
 ## Source Code & Local Installation
 The MCP server is designed to run locally. You can find the complete implementation, installation guides, and Docker configurations here:

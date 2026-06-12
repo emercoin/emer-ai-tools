@@ -205,6 +205,30 @@ For agents that speak the **Model Context Protocol** (e.g. Claude Desktop / Clau
 Code), the `emercoin-agent` MCP server wraps this gateway's HTTP API as tools, so
 the agent never has to craft raw HTTP requests.
 
+## Remote endpoint (hosted — no install)
+
+The fastest path: connect directly to the **hosted** server over Streamable HTTP —
+nothing to install.
+
+- **URL:** `https://ai.emercoin.com/mcp`
+- **Auth:** read tools (`node_status`, `read_record`) are open. Write tools need a
+  session JWT in the `Authorization: Bearer <token>` header — get one at
+  <https://ai.emercoin.com/login>.
+
+```jsonc
+// Claude Code / Desktop MCP config (HTTP transport)
+{
+  "mcpServers": {
+    "emercoin-agent": {
+      "url": "https://ai.emercoin.com/mcp",
+      "headers": { "Authorization": "Bearer <your session token>" }
+    }
+  }
+}
+```
+
+Prefer to run it yourself? Use the local stdio server below.
+
 ## Tools
 
 | Tool | What it does |

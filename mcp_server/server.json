@@ -3,7 +3,7 @@
   "name": "io.github.emercoin/emercoin-agent",
   "title": "Emercoin Agent",
   "description": "On-chain identity and durable memory for AI agents on the Emercoin blockchain (NVS).",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "repository": {
     "url": "https://github.com/emercoin/emer-ai-tools",
     "source": "github",
@@ -20,6 +20,20 @@
           "name": "GATEWAY_URL",
           "description": "Base URL of the edge gateway the MCP server talks to",
           "default": "https://ai.emercoin.com"
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://ai.emercoin.com/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer <session JWT> from https://ai.emercoin.com/login — required for write tools; read tools are open",
+          "isRequired": false,
+          "isSecret": true
         }
       ]
     }
