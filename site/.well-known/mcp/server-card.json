@@ -22,34 +22,76 @@
       "outputSchema": {
         "properties": {
           "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Version",
-            "type": "string"
+            "title": "Version"
           },
           "blocks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Blocks",
-            "type": "integer"
+            "title": "Blocks"
           },
           "headers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Headers",
-            "type": "integer"
+            "title": "Headers"
           },
           "verificationprogress": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Verificationprogress",
-            "type": "number"
+            "title": "Verificationprogress"
           },
           "connections": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Connections",
-            "type": "integer"
+            "title": "Connections"
           },
           "synced": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Synced",
-            "type": "boolean"
+            "title": "Synced"
           }
         },
         "title": "NodeStatus",
@@ -83,60 +125,137 @@
       "outputSchema": {
         "properties": {
           "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Status",
-            "type": "string"
+            "title": "Status"
           },
           "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Name",
-            "type": "string"
+            "title": "Name"
           },
           "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Value",
-            "type": "string"
+            "title": "Value"
           },
           "txid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Txid",
-            "type": "string"
+            "title": "Txid"
           },
           "time": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Time",
-            "type": "integer"
+            "title": "Time"
           },
           "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Address",
-            "type": "string"
+            "title": "Address"
           },
           "address_is_mine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Address Is Mine",
-            "type": "string"
+            "title": "Address Is Mine"
           },
           "operation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Operation",
-            "type": "string"
+            "title": "Operation"
           },
           "days_added": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Days Added",
-            "type": "integer"
+            "title": "Days Added"
           },
           "pending_update": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Pending Update",
-            "type": "boolean"
+            "title": "Pending Update"
           },
           "pending": {
-            "additionalProperties": true,
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
-            "title": "Pending",
-            "type": "object"
+            "title": "Pending"
           }
         },
         "title": "NvsRecord",
