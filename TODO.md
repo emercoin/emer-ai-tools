@@ -10,12 +10,13 @@
       пополняемый из холодной treasury; не держать весь баланс на ключе, который
       подписывает каждую запись.
 - [ ] Лимит расхода EMC/час + alerting на аномальный темп записей.
-- [ ] Ротация операционного адреса; публичная политика хранения средств
-      (доверие важнее юрлица — слой 2 «надёжность без юрлица»).
-- [~] GitHub OAuth вместо raw-token login; JWT secret ≥32 байт. Device-flow +
-      web-flow (за флагом) реализованы в edge; raw-token за `EDGE_DEV_LOGIN_ENABLED`.
-      Device-flow проверен e2e с реальным client_id; MCP `login()`+`login_poll()`
-      через device-flow готовы. Осталось: прод web-callback на домене (ai.emercoin.com).
+  - [ ] Ротация операционного адреса; публичная политика хранения средствС
+        (доверие важнее юрлица — слой 2 «надёжность без юрлица»).
+- [x] GitHub OAuth вместо raw-token login; JWT secret ≥32 байт. Device-flow +
+      web-flow реализованы и **развёрнуты на проде** (`ai.emercoin.com`): браузерный
+      вход на `/login`, callback с сессионным токеном; статический корпус (index/login/
+      css) раздаёт Caddy, динамику — edge. Device-flow e2e подтверждён через CF
+      (запись в mainnet). raw-token остаётся за `EDGE_DEV_LOGIN_ENABLED` (в проде off).
 - [x] Публикация adapter-образа как `emercoin/rest-api` (Docker Hub) — CI
       `.github/workflows/publish-rest-api.yml` на тег `rest-api-v*` (disjoint c
       node-пайплайном). Опубликовано: `emercoin/rest-api:0.0.1` + `latest`
