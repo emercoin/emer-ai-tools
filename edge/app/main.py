@@ -53,6 +53,28 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Emercoin Agent Gateway (edge)", version="0.0.1", lifespan=lifespan)
 
 
+class _StripMcpSlash:
+    """Serve `/mcp/` exactly as `/mcp`. Some MCP gateways (e.g. Smithery) POST to
+    the trailing-slash form; the default 307 slash-redirect breaks the streamable
+    HTTP session handshake (the gateway loops on it → 502). Rewrite the path before
+    routing so both forms hit the transport with no redirect."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope.get("path") == "/mcp/":
+            scope = dict(scope)
+            scope["path"] = "/mcp"
+            raw = scope.get("raw_path")
+            if raw:
+                scope["raw_path"] = raw.split(b"?", 1)[0].rstrip(b"/") or b"/mcp"
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(_StripMcpSlash)
+
+
 @app.exception_handler(AdapterError)
 async def _adapter_error(request: Request, exc: AdapterError) -> JSONResponse:
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
