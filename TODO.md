@@ -34,5 +34,4 @@
       подписей (.asc/SHA256SUMS нет), а emercoin.pub — EC-ключ P-256 `role: emercoin`
       (PKI/NVS), не релизный. Опц. альтернатива: пин SHA256 тарбола (TOFU) —
       `c4b0f4551956a14e33ebe7f9d88479db3a0b92fd20649b8b4a46f7c69ea68db0` для 0.8.5.
-- [x] Создать версию FS (fast start) образ Emercoin с синхронизированным за 7 последних лет блокчейном.
 - [x] Создать docker для Emercoin  
