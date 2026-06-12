@@ -82,7 +82,10 @@ mcp = FastMCP(
             enabled=True, valid_scopes=[MCP_SCOPE], default_scopes=[MCP_SCOPE]
         ),
         required_scopes=[MCP_SCOPE],
-        resource_server_url=None,
+        # Advertise this server as its own resource (RFC 9728) so modern clients
+        # discover the AS via /.well-known/oauth-protected-resource + the 401's
+        # resource_metadata pointer. issuer == resource (combined AS+RS).
+        resource_server_url=AnyHttpUrl(settings.public_url),
     ),
 )
 
