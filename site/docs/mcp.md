@@ -6,13 +6,16 @@ the agent never has to craft raw HTTP requests.
 
 ## Remote endpoint (hosted — no install)
 
-The fastest path: connect directly to the **hosted** server over Streamable HTTP —
-nothing to install.
+Connect directly to the **hosted** server over Streamable HTTP — nothing to install.
 
 - **URL:** `https://ai.emercoin.com/mcp`
-- **Auth:** read tools (`node_status`, `read_record`) are open. Write tools need a
-  session JWT in the `Authorization: Bearer <token>` header — get one at
-  <https://ai.emercoin.com/login>.
+
+### Getting started
+1. **Add the server** — point your MCP client at the URL above. The **read tools**
+   (`node_status`, `read_record`) work **immediately, with no token**.
+2. **For write tools** (`store_memory`, `register_identity`) add a session token:
+   open <https://ai.emercoin.com/login>, sign in with GitHub, copy the token shown,
+   and put it in the `Authorization: Bearer <token>` header.
 
 ```jsonc
 // Claude Code / Desktop MCP config (HTTP transport)
@@ -20,11 +23,15 @@ nothing to install.
   "mcpServers": {
     "emercoin-agent": {
       "url": "https://ai.emercoin.com/mcp",
-      "headers": { "Authorization": "Bearer <your session token>" }
+      "headers": { "Authorization": "Bearer <token from /login, optional for reads>" }
     }
   }
 }
 ```
+
+> The manual token is short-lived. **Browser-based OAuth login** (the client signs
+> you in automatically — no copy-paste, with token refresh) is rolling out; once
+> live, no manual token step is needed.
 
 Prefer to run it yourself? Use the local stdio server below.
 
