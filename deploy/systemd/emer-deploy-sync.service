@@ -1,0 +1,8 @@
+[Unit]
+Description=Emercoin gateway pull-based auto-deploy (git pull + reconcile)
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/emer-ai-tools/deploy/deploy-sync.sh

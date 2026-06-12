@@ -10,8 +10,14 @@
 # token with write to the emercoin org).
 name: Publish REST API image
 
+# Builds on push to main touching adapter/ (moves :latest + :sha -> Watchtower
+# rolls it out) and on rest-api-v* tags (pinned version + :latest).
 on:
   push:
+    branches: [main]
+    paths:
+      - "adapter/**"
+      - ".github/workflows/publish-rest-api.yml"
     tags: ["rest-api-v*"]
   workflow_dispatch:
 
@@ -41,7 +47,8 @@ jobs:
           tags: |
             type=match,pattern=rest-api-v(.*),group=1
             type=match,pattern=rest-api-v(\d+\.\d+),group=1
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/rest-api-v') || github.event_name == 'workflow_dispatch' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rest-api-v') || github.event_name == 'workflow_dispatch' }}
+            type=sha,format=short
 
       - name: Build and push
         uses: docker/build-push-action@v6

@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the Emercoin gateway auto-deploy every couple of minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
