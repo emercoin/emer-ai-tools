@@ -23,6 +23,7 @@ from .config import settings
 from .github import GitHubOAuth
 from .oauth_state import OAuthStateStore
 from .ratelimit import RateLimiter
+from .stats import Stats
 
 
 @asynccontextmanager
@@ -34,9 +35,10 @@ async def lifespan(app: FastAPI):
         settings.github_client_id, settings.github_client_secret, settings.github_redirect_uri
     )
     app.state.oauth = OAuthStateStore(settings.redis_url)
-    # Remote MCP (/mcp) reuses the same adapter + rate limiter; its session
+    app.state.stats = Stats(settings.redis_url)
+    # Remote MCP (/mcp) reuses the same adapter + rate limiter + stats; its session
     # manager must run for the streamable-http transport to work.
-    mcp_configure(app.state.adapter, app.state.ratelimiter)
+    mcp_configure(app.state.adapter, app.state.ratelimiter, app.state.stats)
     async with mcp_server.session_manager.run():
         yield
     await app.state.adapter.aclose()
@@ -44,6 +46,7 @@ async def lifespan(app: FastAPI):
     await app.state.challenges.aclose()
     await app.state.github.aclose()
     await app.state.oauth.aclose()
+    await app.state.stats.aclose()
 
 
 app = FastAPI(title="Emercoin Agent Gateway (edge)", version="0.0.1", lifespan=lifespan)
@@ -196,6 +199,12 @@ async def root(
 @app.get("/healthz")
 async def healthz() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/stats/mcp")
+async def mcp_stats(request: Request) -> dict:
+    """Public aggregate usage of the remote MCP server (no per-user identities)."""
+    return await request.app.state.stats.snapshot()
 
 
 @app.get("/info")

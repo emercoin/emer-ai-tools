@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MCP usage · Emercoin Agent Gateway</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .card{max-width:680px;text-align:left}
+    .nums{display:flex;gap:14px;margin:18px 0}
+    .num{flex:1;background:var(--field);border-radius:12px;padding:16px;text-align:center}
+    .num b{display:block;font-size:30px;color:var(--purple);line-height:1.1}
+    .num span{font-size:12px;color:var(--purple-mid)}
+    h2{font-size:13px;color:var(--purple-mid);text-transform:uppercase;letter-spacing:.5px;margin:22px 0 8px}
+    .bar{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:14px}
+    .bar .lbl{width:140px;color:var(--ink);font-family:ui-monospace,Menlo,monospace;font-size:12px}
+    .bar .track{flex:1;background:var(--field);border-radius:5px;height:14px;overflow:hidden}
+    .bar .fill{height:100%;background:var(--purple)}
+    .bar .v{width:40px;text-align:right;color:var(--purple-mid);font-size:12px}
+    .recent{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--ink);max-height:200px;overflow:auto}
+    .recent div{padding:3px 0;border-bottom:1px solid #f0eaf8}
+    .muted{color:#b09cc9;font-size:12px}
+    a.back{margin-top:20px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand"><b>&#9679;</b> emer<span>coin</span></div>
+    <h1>MCP usage</h1>
+    <p class="sub" style="margin-bottom:0">Aggregate calls to the hosted MCP server at
+      <code>/mcp</code>. No per-user identities — counts only.</p>
+
+    <div class="nums">
+      <div class="num"><b id="total">–</b><span>tool calls</span></div>
+      <div class="num"><b id="callers">–</b><span>unique callers</span></div>
+      <div class="num"><b id="toolc">–</b><span>distinct tools</span></div>
+    </div>
+
+    <h2>By tool</h2><div id="tools"></div>
+    <h2>By client</h2><div id="clients"></div>
+    <h2>Per day</h2><div id="daily"></div>
+    <h2>Recent</h2><div class="recent" id="recent"></div>
+
+    <a class="back" href="/">← home</a>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    function bars(el, obj) {
+      const entries = Object.entries(obj || {}).sort((a,b) => b[1]-a[1]);
+      const max = entries.reduce((m,[,v]) => Math.max(m,v), 0) || 1;
+      el.innerHTML = entries.length ? entries.map(([k,v]) =>
+        `<div class="bar"><span class="lbl" title="${k}">${k}</span>`+
+        `<span class="track"><span class="fill" style="width:${Math.round(v/max*100)}%"></span></span>`+
+        `<span class="v">${v}</span></div>`).join('') : '<span class="muted">no data yet</span>';
+    }
+    fetch('/stats/mcp').then(r => r.json()).then(d => {
+      $('total').textContent = d.total_calls ?? 0;
+      $('callers').textContent = d.unique_callers ?? 0;
+      $('toolc').textContent = Object.keys(d.tools || {}).length;
+      bars($('tools'), d.tools);
+      bars($('clients'), d.clients);
+      bars($('daily'), d.daily);
+      const r = (d.recent || []);
+      $('recent').innerHTML = r.length ? r.map(e => {
+        const t = new Date((e.ts||0)*1000).toISOString().replace('T',' ').slice(0,19);
+        return `<div>${t} · <b>${e.tool}</b> <span class="muted">${e.client||''}</span></div>`;
+      }).join('') : '<span class="muted">no calls yet</span>';
+    }).catch(() => { $('total').textContent = '!'; });
+  </script>
+</body>
+</html>
