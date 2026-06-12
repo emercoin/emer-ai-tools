@@ -1,0 +1,12 @@
+# Reverse proxy for the edge, fronted by Cloudflare (proxied).
+# Serves edge on BOTH http:// (no auto-redirect) and :443 (tls internal) so it
+# works under CF "Flexible" (origin :80) and a per-host "Full" rule (origin :443).
+# Origin :80/:443 are firewalled to Cloudflare IP ranges; direct-IP hits are dropped.
+http://ai.emercoin.com {
+	reverse_proxy emer-edge:8000
+}
+
+ai.emercoin.com {
+	tls internal
+	reverse_proxy emer-edge:8000
+}

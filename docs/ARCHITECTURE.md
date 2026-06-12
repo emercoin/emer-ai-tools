@@ -90,16 +90,19 @@ mcp_server/server.py thin MCP client of the edge HTTP API
 ```
 
 ## Published images (CI → Docker Hub)
-Two independent images, each with its own release tag so one tag never triggers
-both pipelines:
+Three independent images, each with its own release tag so one tag never triggers
+another's pipeline:
 
 | Image | Source | Workflow | Release tag | Arch |
 |-------|--------|----------|-------------|------|
 | `emercoin/rest-api` | `adapter/` | `publish-rest-api.yml` | `rest-api-v*` (e.g. `rest-api-v0.0.1`) | amd64+arm64 |
+| `emercoin/edge` | `edge/` | `publish-edge.yml` | `edge-v*` (e.g. `edge-v0.0.1`) | amd64+arm64 |
 | `emercoin/core` | `node/` | `publish-node.yml` | `node-v*` (e.g. `node-v0.8.5`) | amd64 |
 
 - **`emercoin/rest-api`** — the generic RPC↔REST front for the wallet (nothing
   agent-specific), so other services pull it instead of vendoring source.
+- **`emercoin/edge`** — the agent-facing IAM layer; the public deploy pulls it
+  (and auto-updates via Watchtower) rather than building on the box.
 - **`emercoin/core`** — the wallet/node itself; `node-v*` publishes
   `emercoin/core:<EMER_DISTR_VERSION>` + `latest` (the tag is read from
   `node/Dockerfile`). amd64 only (the emercoind tarball is x86_64). A manual
@@ -112,6 +115,22 @@ The USDT→EMC exchanger (separate repo) runs both:
 image: emercoin/core:0.8.5      # the wallet/node
 image: emercoin/rest-api:0.0.1  # RPC↔REST in front of it
 ```
+
+## Deployment & CD (the public `ai.emercoin.com` box)
+The single droplet runs `deploy/docker-compose.droplet.yaml` (emc + adapter + edge
++ redis + caddy + watchtower). Delivery is **pull-based** — nothing reaches into
+the box; it pulls from the registry — which keeps the origin firewalled to
+Cloudflare with no inbound deploy channel.
+
+- **CI**: pushing `rest-api-v*` / `edge-v*` / `node-v*` builds & pushes the
+  matching image (moving its `:latest`).
+- **CD (hybrid)**: **Watchtower** auto-updates only the label-enabled containers —
+  `adapter` and `edge` — when their `:latest` moves (hourly poll). The node
+  (`emercoin/core`) is intentionally **not** labelled: it never auto-updates,
+  because a `node-v*` release overwrites the official wallet image and must be
+  rolled out deliberately. Apply a node release (or any compose/Caddyfile/.env
+  change) with `deploy/redeploy.sh` (git pull → compose pull → up -d).
+- Secrets (`deploy/.env`) and `node/emercoin.conf` stay on the box (gitignored).
 
 ## Adapter endpoints (internal REST, no user auth)
 - `GET  /info`, `GET /status`, `GET /` — node info / sync / aggregated state

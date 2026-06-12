@@ -1,0 +1,93 @@
+# Single-box public deploy (DO droplet): node + adapter + edge + redis + caddy.
+#   docker compose -f docker-compose.droplet.yaml --env-file .env pull
+#   docker compose -f docker-compose.droplet.yaml --env-file .env up -d
+#
+# Differences vs the dev/prod compose:
+#  - emc publishes NO host ports (RPC/p2p stay on the internal docker network).
+#  - adapter + edge run from published images and AUTO-UPDATE via Watchtower
+#    (label-scoped: only the two labeled containers are touched).
+#  - emc (emercoin/core) is deliberately NOT labelled -> never auto-updated; the
+#    wallet/node is released manually (run ./redeploy.sh after a node-v* release).
+#  - caddy fronts edge on 80/443; origin is firewalled to Cloudflare IPs.
+#
+# Requires deploy/.env (chmod 600) with ADAPTER_INTERNAL_KEY, EDGE_JWT_SECRET,
+# EDGE_GITHUB_CLIENT_ID, EDGE_GITHUB_CLIENT_SECRET, and node/emercoin.conf present.
+name: emercoin
+
+volumes:
+  blockchain_data:
+    name: emer_data
+    external: true
+  caddy_data:
+  caddy_config:
+
+services:
+  emc:
+    image: emercoin/core:0.8.5
+    container_name: emc
+    restart: unless-stopped
+    volumes:
+      - blockchain_data:/srv/emercoind
+      - ../node/emercoin.conf:/srv/emercoind/emercoin.conf:ro
+      - /etc/localtime:/etc/localtime:ro
+    stop_grace_period: 40s
+    command: /bin/emercoind -datadir=/srv/emercoind -conf=/srv/emercoind/emercoin.conf -printtoconsole -dbcache=64 -maxconnections=16
+
+  redis:
+    image: redis:7-alpine
+    container_name: emer-redis
+    restart: unless-stopped
+
+  adapter:
+    image: emercoin/rest-api:latest
+    container_name: emer-adapter
+    restart: unless-stopped
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    environment:
+      ADAPTER_RPC_URL: http://emc:6662
+      ADAPTER_RPC_USER: emcrpc
+      ADAPTER_RPC_PASSWORD: emcpass
+      ADAPTER_INTERNAL_KEY: ${ADAPTER_INTERNAL_KEY:-}
+    depends_on: [emc]
+
+  edge:
+    image: emercoin/edge:latest
+    container_name: emer-edge
+    restart: unless-stopped
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    environment:
+      EDGE_ADAPTER_URL: http://emer-adapter:8000
+      EDGE_ADAPTER_KEY: ${ADAPTER_INTERNAL_KEY:-}
+      EDGE_REDIS_URL: redis://redis:6379/0
+      EDGE_JWT_SECRET: ${EDGE_JWT_SECRET:-}
+      EDGE_GITHUB_CLIENT_ID: ${EDGE_GITHUB_CLIENT_ID:-}
+      EDGE_GITHUB_CLIENT_SECRET: ${EDGE_GITHUB_CLIENT_SECRET:-}
+      EDGE_DEV_LOGIN_ENABLED: "false"
+      EDGE_WEB_LOGIN_ENABLED: ${EDGE_WEB_LOGIN_ENABLED:-false}
+      EDGE_GITHUB_REDIRECT_URI: ${EDGE_GITHUB_REDIRECT_URI:-}
+    depends_on: [redis, adapter]
+
+  caddy:
+    image: caddy:2
+    container_name: emer-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [edge]
+
+  # Auto-updates ONLY the label-enabled containers (adapter, edge) when their
+  # :latest image moves in the registry. Polls hourly; prunes old images.
+  watchtower:
+    image: containrrr/watchtower
+    container_name: emer-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --label-enable --cleanup --interval 3600
