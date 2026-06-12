@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from . import names
 from .auth import Principal, decode_token
@@ -60,6 +61,10 @@ mcp = FastMCP(
     stateless_http=True,
     json_response=True,
     streamable_http_path="/",
+    # Edge sits behind trusted Caddy + Cloudflare (origin firewalled to CF), so the
+    # incoming Host is ai.emercoin.com — disable the SDK's DNS-rebinding Host check
+    # (meant for localhost browser scenarios) which would otherwise 421.
+    transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
 )
 
 
