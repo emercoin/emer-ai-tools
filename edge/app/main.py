@@ -15,6 +15,8 @@ from pydantic import BaseModel, Field
 
 from . import names, web
 from .auth import Principal, current_principal, issue_jwt, resolve_github_token
+from .mcp_app import configure as mcp_configure
+from .mcp_app import mcp as mcp_server
 from .challenge import ChallengeStore
 from .client import AdapterClient, AdapterError
 from .config import settings
@@ -32,7 +34,11 @@ async def lifespan(app: FastAPI):
         settings.github_client_id, settings.github_client_secret, settings.github_redirect_uri
     )
     app.state.oauth = OAuthStateStore(settings.redis_url)
-    yield
+    # Remote MCP (/mcp) reuses the same adapter + rate limiter; its session
+    # manager must run for the streamable-http transport to work.
+    mcp_configure(app.state.adapter, app.state.ratelimiter)
+    async with mcp_server.session_manager.run():
+        yield
     await app.state.adapter.aclose()
     await app.state.ratelimiter.aclose()
     await app.state.challenges.aclose()
@@ -41,6 +47,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Emercoin Agent Gateway (edge)", version="0.0.1", lifespan=lifespan)
+
+# Remote MCP server (Streamable HTTP) for agents that speak MCP — same ops as the
+# REST API; tools read the Authorization bearer token per call. Endpoint: /mcp
+app.mount("/mcp", mcp_server.streamable_http_app())
 
 
 @app.exception_handler(AdapterError)

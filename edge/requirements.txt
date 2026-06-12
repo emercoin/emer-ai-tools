@@ -4,3 +4,4 @@ httpx>=0.27
 pyjwt>=2.8
 redis>=5.0
 pydantic-settings>=2.2
+mcp>=1.12

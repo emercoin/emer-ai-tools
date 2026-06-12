@@ -54,6 +54,22 @@ def issue_jwt(github_id: int, github_login: str, tariff: str = "free") -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 
+def decode_token(token: str) -> Principal | None:
+    """Verify a session JWT and return the Principal, or None if invalid.
+
+    A non-raising variant of `current_principal`, used outside the FastAPI
+    dependency system (e.g. the MCP /mcp auth middleware)."""
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+    except jwt.PyJWTError:
+        return None
+    return Principal(
+        github_id=int(payload["sub"]),
+        github_login=payload["login"],
+        tariff=payload.get("tariff", "free"),
+    )
+
+
 _bearer = HTTPBearer(auto_error=True)
 
 
