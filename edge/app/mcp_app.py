@@ -70,28 +70,31 @@ async def _record(ctx: Context, tool: str, principal: Principal) -> None:
 # --- output schemas (drive each tool's outputSchema) -----------------------
 
 class NodeStatus(TypedDict, total=False):
-    """Node sync status."""
-    version: str
-    blocks: int
-    headers: int
-    verificationprogress: float
-    connections: int
-    synced: bool
+    """Node sync status. Fields are nullable — the MCP SDK fills any absent field
+    with null when serialising structured output, so the schema must allow it."""
+    version: str | None
+    blocks: int | None
+    headers: int | None
+    verificationprogress: float | None
+    connections: int | None
+    synced: bool | None
 
 
 class NvsRecord(TypedDict, total=False):
-    """An NVS record (confirmed from the name DB, or pending from the mempool)."""
-    status: str
-    name: str
-    value: str
-    txid: str
-    time: int
-    address: str
-    address_is_mine: str
-    operation: str
-    days_added: int
-    pending_update: bool
-    pending: dict
+    """An NVS record (confirmed from the name DB, or pending from the mempool).
+    Fields are nullable: a pending record omits several, and the SDK serialises
+    absent fields as null."""
+    status: str | None
+    name: str | None
+    value: str | None
+    txid: str | None
+    time: int | None
+    address: str | None
+    address_is_mine: str | None
+    operation: str | None
+    days_added: int | None
+    pending_update: bool | None
+    pending: dict | None
 
 
 class Identity(TypedDict):
