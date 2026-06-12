@@ -1,4 +1,5 @@
 ![](https://github.com/emercoin/emer-ai-tools/blob/main/docs/docker.png)
+[![smithery badge](https://smithery.ai/badge/mechnotech/emer-ai)](https://smithery.ai/servers/mechnotech/emer-ai)
 
 # Emercoin + AI agent tools
 
