@@ -22,7 +22,17 @@ def _shell(inner: str, *, err: bool = False) -> str:
     )
 
 
-def result_page(github_login: str, token: str, ttl_minutes: int, tariff: str) -> str:
+def _human_ttl(seconds: int) -> str:
+    if seconds >= 86400:
+        d = seconds // 86400
+        return f"{d} day{'s' if d != 1 else ''}"
+    if seconds >= 3600:
+        h = seconds // 3600
+        return f"{h} hour{'s' if h != 1 else ''}"
+    return f"{max(1, seconds // 60)} min"
+
+
+def result_page(github_login: str, token: str, ttl_seconds: int, tariff: str) -> str:
     login = html.escape(github_login)
     tok = html.escape(token)
     inner = (
@@ -33,7 +43,7 @@ def result_page(github_login: str, token: str, ttl_minutes: int, tariff: str) ->
         '<button class="copy" onclick="navigator.clipboard.writeText('
         "document.getElementById('tok').value).then(()=>{this.textContent='Copied ✓'})"
         '">Copy token</button></div>'
-        f'<div class="meta">Expires in {ttl_minutes} min · {html.escape(tariff)} tier</div>'
+        f'<div class="meta">Expires in {_human_ttl(ttl_seconds)} · {html.escape(tariff)} tier</div>'
         '<a class="back" href="/login">← back</a>'
     )
     return _shell(inner)

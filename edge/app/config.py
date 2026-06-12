@@ -17,8 +17,9 @@ class Settings(BaseSettings):
     public_url: str = "https://ai.emercoin.com"
 
     # Auth: self-contained session JWT (no agent registry; we trust GitHub ID).
+    # 7 days — long enough for a pasted token; OAuth clients also auto-refresh.
     jwt_secret: str = "dev-insecure-change-me"
-    jwt_ttl_seconds: int = 3600
+    jwt_ttl_seconds: int = 604800
 
     # GitHub OAuth App — identity bootstrap. Device flow needs only the client_id;
     # the web flow also needs the secret + redirect_uri. Scope is empty (we read

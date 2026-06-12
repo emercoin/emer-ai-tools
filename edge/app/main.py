@@ -48,6 +48,7 @@ async def lifespan(app: FastAPI):
     await app.state.github.aclose()
     await app.state.oauth.aclose()
     await app.state.stats.aclose()
+    await mcp_oauth.aclose()
 
 
 app = FastAPI(title="Emercoin Agent Gateway (edge)", version="0.0.1", lifespan=lifespan)
@@ -343,7 +344,7 @@ async def github_web_callback(
     and the browser web-login flow (render a branded result page)."""
     # MCP OAuth flow: the provider owns this state — finish it and 302 back to the
     # MCP client's redirect_uri with our authorization code. (Not gated by web login.)
-    if state and mcp_oauth.owns_state(state):
+    if state and await mcp_oauth.owns_state(state):
         if error or not code:
             return HTMLResponse(web.error_page(error or "authorization failed"), status_code=400)
         return RedirectResponse(await mcp_oauth.complete_github(code, state), status_code=302)
@@ -364,7 +365,7 @@ async def github_web_callback(
     github_id, github_login = await github.fetch_user(access_token)
     token = issue_jwt(github_id, github_login)
     return HTMLResponse(
-        web.result_page(github_login, token, settings.jwt_ttl_seconds // 60, "free")
+        web.result_page(github_login, token, settings.jwt_ttl_seconds, "free")
     )
 
 
