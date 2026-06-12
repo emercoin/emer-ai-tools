@@ -1,4 +1,5 @@
 # Emercoin Agent — MCP server
+[![smithery badge](https://smithery.ai/badge/mechnotech/emer-ai)](https://smithery.ai/servers/mechnotech/emer-ai)
 
 Thin MCP client over the **edge** gateway HTTP API. Lets an AI agent use the
 Emercoin chain as its identity + memory layer. (The edge is the agent-facing IAM
