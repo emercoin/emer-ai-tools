@@ -10,10 +10,10 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
-from . import names
+from . import names, web
 from .auth import Principal, current_principal, issue_jwt, resolve_github_token
 from .challenge import ChallengeStore
 from .client import AdapterClient, AdapterError
@@ -281,6 +281,14 @@ async def github_device_poll(
 
 # --- GitHub login: web authorization-code flow (browser, opt-in) -----------
 
+@app.get("/login", response_class=HTMLResponse)
+async def login_page() -> HTMLResponse:
+    """Lightweight branded landing page with the 'Continue with GitHub' button."""
+    if not settings.web_login_enabled:
+        raise HTTPException(status_code=404, detail="web login disabled; use device flow")
+    return HTMLResponse(web.login_page())
+
+
 @app.get("/auth/github/start")
 async def github_web_start(
     github: GitHubOAuth = Depends(get_github), oauth: OAuthStateStore = Depends(get_oauth)
@@ -292,26 +300,33 @@ async def github_web_start(
     return RedirectResponse(url=github.authorize_url(state))
 
 
-@app.get("/auth/github/callback", response_model=TokenResponse)
+@app.get("/auth/github/callback", response_class=HTMLResponse)
 async def github_web_callback(
-    code: str,
-    state: str,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
     github: GitHubOAuth = Depends(get_github),
     oauth: OAuthStateStore = Depends(get_oauth),
-) -> TokenResponse:
-    """GitHub redirects here with ?code&state; exchange it for a session JWT."""
+) -> HTMLResponse:
+    """GitHub redirects the browser here with ?code&state; exchange it for a session
+    JWT and render a branded result page (errors render a styled page too)."""
     if not settings.web_login_enabled:
-        raise HTTPException(status_code=404, detail="web login disabled")
+        return HTMLResponse(web.error_page("Web login is disabled."), status_code=404)
+    if error or not code or not state:
+        return HTMLResponse(web.error_page(error or "missing authorization code"), status_code=400)
     if not await oauth.consume_state(state):
-        raise HTTPException(status_code=400, detail="invalid or expired state")
+        return HTMLResponse(web.error_page("Invalid or expired sign-in state."), status_code=400)
     result = await github.exchange_code(code)
     access_token = result.get("access_token")
     if not access_token:
-        raise HTTPException(status_code=401, detail=f"code exchange failed: {result.get('error', 'unknown')}")
+        return HTMLResponse(
+            web.error_page(f"Code exchange failed: {result.get('error', 'unknown')}"),
+            status_code=401,
+        )
     github_id, github_login = await github.fetch_user(access_token)
     token = issue_jwt(github_id, github_login)
-    return TokenResponse(
-        access_token=token, github_id=github_id, github_login=github_login, tariff="free"
+    return HTMLResponse(
+        web.result_page(github_login, token, settings.jwt_ttl_seconds // 60, "free")
     )
 
 
