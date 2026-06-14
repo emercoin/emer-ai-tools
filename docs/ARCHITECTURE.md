@@ -143,6 +143,7 @@ Cloudflare with no inbound deploy channel.
 - `GET  /nvs/{name}`, `GET /history/{name}`, `GET /addresses/{address}/names`
 - `POST /verify` — `verifymessage` (used by edge agent-login)
 - `GET  /wallet/address`, `GET /wallet/balance` — fund/inspect the hot-wallet
+- `POST /wallet/send` — `sendtoaddress`; internal EMC payout primitive (e.g. for swap)
 
 ## Edge endpoints (agent-facing, authorized + rate-limited)
 - `POST /auth/login` — GitHub token -> JWT (bootstrap); `POST /auth/challenge` +

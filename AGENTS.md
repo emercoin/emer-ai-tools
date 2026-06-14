@@ -96,8 +96,9 @@ Two services, one responsibility each:
 | `GET /history/{name}` | value history of a name |
 | `GET /addresses/{address}/names` | names owned by an address |
 
-Hot-wallet funding/inspection (`GET /wallet/address`, `GET /wallet/balance`) lives
-on the **adapter**, not the agent-facing edge — it's an internal operator concern.
+Hot-wallet funding/inspection (`GET /wallet/address`, `GET /wallet/balance`) and the
+EMC payout primitive (`POST /wallet/send` -> `sendtoaddress`) live on the **adapter**,
+not the agent-facing edge — internal operator concerns gated only by `X-Internal-Key`.
 
 ## Quickstart
 

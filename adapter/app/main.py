@@ -72,6 +72,12 @@ class VerifyRequest(BaseModel):
     message: str
 
 
+class SendRequest(BaseModel):
+    address: str = Field(..., description="destination EMC address")
+    amount: float = Field(..., gt=0, description="amount in EMC")
+    comment: str | None = Field(default=None, description="local wallet memo (not on-chain)")
+
+
 # --- health / status -------------------------------------------------------
 
 @app.get("/")
@@ -268,3 +274,22 @@ async def wallet_balance(rpc: EmercoinRPC = Depends(get_rpc)) -> dict:
         }
     except RPCError as exc:
         raise HTTPException(status_code=502, detail=f"node rpc error: {exc.message}")
+
+
+@app.post("/wallet/send")
+async def wallet_send(req: SendRequest, rpc: EmercoinRPC = Depends(get_rpc)) -> dict:
+    """Send EMC from the hot-wallet (sendtoaddress). Internal payout primitive —
+    the only thing gating it is `X-Internal-Key`, so keep this adapter off any
+    untrusted network. Returns the spending txid.
+
+    Caller-facing errors are mapped from the node: a locked wallet (encrypted and
+    not unlocked) is 409, insufficient funds / invalid address are 400."""
+    try:
+        txid = await rpc.call("sendtoaddress", req.address, req.amount, req.comment or "")
+    except RPCError as exc:
+        if exc.code == -13:  # wallet locked (encrypted, walletpassphrase needed)
+            raise HTTPException(status_code=409, detail=f"wallet locked: {exc.message}")
+        if exc.code in (-6, -5, -3):  # insufficient funds / invalid address / invalid amount
+            raise HTTPException(status_code=400, detail=exc.message)
+        raise HTTPException(status_code=502, detail=f"send failed: {exc.message}")
+    return {"txid": txid, "address": req.address, "amount": req.amount}
