@@ -29,3 +29,20 @@ ai.emercoin.com {
 	tls internal
 	import app
 }
+
+# swap.emercoin.com — the USDT→EMC cashier. Runs as its own stack (repo: emercoin/
+# swap) joined to this docker network; it serves its own static page, so we just
+# reverse-proxy everything to it. Origin stays firewalled to Cloudflare.
+(swap) {
+	encode gzip
+	reverse_proxy swap:8002
+}
+
+http://swap.emercoin.com {
+	import swap
+}
+
+swap.emercoin.com {
+	tls internal
+	import swap
+}
