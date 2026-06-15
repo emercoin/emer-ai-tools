@@ -1,18 +1,20 @@
 # Publish the edge image (agent-facing IAM: GitHub login, JWT, rate limit; source
-# in edge/). The droplet pulls this instead of building on the box, and Watchtower
-# auto-updates the running container when :latest moves.
+# in edge/) to Docker Hub, then deploy it on the droplet over SSH — CI pulls +
+# recreates just this container on release. No Watchtower, no registry polling, no
+# rollout wait (the pull happens once per release, not on a timer).
 #
 # Triggers (prefixed tag keeps it disjoint from rest-api-v* / node-v*):
 #   - push a tag `edge-v*` (e.g. edge-v0.0.1) -> tags {version}, {major.minor}, latest
 #   - manual run (workflow_dispatch) -> tags latest
 #
-# Requires repo secrets DOCKERHUB_USERNAME + DOCKERHUB_TOKEN (write to the emercoin org).
+# Secrets: DOCKERHUB_USERNAME + DOCKERHUB_TOKEN (push to the emercoin org);
+# DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY (the SSH deploy — when unset the deploy
+# step is skipped, not failed, so the image still publishes).
 name: Publish edge image
 
 # Builds on:
-#  - push to main touching edge/  -> moves :latest (+ :sha) so Watchtower rolls it
-#    out automatically (fast path for small fixes, no tag needed).
-#  - push of an edge-v* tag        -> pinned version image (+ :latest).
+#  - push to main touching edge/  -> moves :latest (+ :sha) and deploys (fast path).
+#  - push of an edge-v* tag        -> pinned version image (+ :latest) and deploys.
 # (If a release tag is ever skipped by the path filter, re-run via workflow_dispatch.)
 on:
   push:
@@ -29,6 +31,10 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Surfaced into the env context so the deploy step can self-skip when the SSH
+    # secrets aren't configured (the `secrets` context isn't usable in `if:`).
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
     steps:
       - uses: actions/checkout@v4
 
@@ -60,3 +66,14 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      # Roll the new image on the droplet immediately: SSH in and pull+recreate just
+      # the edge container. Skipped (not failed) when DEPLOY_HOST is unset.
+      - name: Deploy edge on the droplet
+        if: env.DEPLOY_HOST != ''
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: bash /opt/emer-ai-tools/deploy/deploy-service.sh edge

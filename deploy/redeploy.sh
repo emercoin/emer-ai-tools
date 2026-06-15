@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Manual full redeploy on the droplet. Use after a node-v* release or any compose/
-# Caddyfile/.env change. edge & adapter normally auto-update via Watchtower, so for
-# those you don't need this — it's the deliberate, all-services path.
+# Caddyfile/.env change. edge & adapter deploy themselves on release (CI -> SSH ->
+# deploy-service.sh), so for those you don't need this — it's the all-services path.
 #
 #   ssh root@<droplet> 'bash /opt/emer-ai-tools/deploy/redeploy.sh'
 set -euo pipefail

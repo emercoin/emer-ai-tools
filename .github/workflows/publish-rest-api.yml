@@ -10,8 +10,10 @@
 # token with write to the emercoin org).
 name: Publish REST API image
 
-# Builds on push to main touching adapter/ (moves :latest + :sha -> Watchtower
-# rolls it out) and on rest-api-v* tags (pinned version + :latest).
+# Builds on push to main touching adapter/ (moves :latest + :sha, then deploys on
+# the droplet over SSH) and on rest-api-v* tags (pinned version + :latest). Deploy
+# secrets DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY are optional — when unset the
+# deploy step is skipped (not failed) and the image still publishes.
 on:
   push:
     branches: [main]
@@ -27,6 +29,9 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Surfaced into env so the deploy step can self-skip when SSH secrets are unset.
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,3 +63,14 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      # Roll the new image on the droplet immediately: SSH in and pull+recreate just
+      # the adapter container. Skipped (not failed) when DEPLOY_HOST is unset.
+      - name: Deploy adapter on the droplet
+        if: env.DEPLOY_HOST != ''
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: bash /opt/emer-ai-tools/deploy/deploy-service.sh adapter

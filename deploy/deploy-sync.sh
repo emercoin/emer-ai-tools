@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Pull-based auto-deploy, run on a systemd timer (~every 2 min). The droplet pulls
-# main and reconciles itself to the new state — no inbound deploy channel, so the
-# origin stays firewalled to Cloudflare.
+# Pull-based config sync, run on a systemd timer (~every 2 min). The droplet pulls
+# main and reconciles its *config* to the new state. (Image rollouts are pushed
+# separately by CI over SSH — see deploy-service.sh — so they need no timer.)
 #
 #   site/ change                -> nothing: a directory mount, Caddy serves it live
 #   Caddyfile change            -> recreate caddy (single-file mount, inode changes)
 #   compose change              -> re-apply the whole stack
-#   edge/adapter image changes  -> handled separately by Watchtower (on CI build)
+#   edge/adapter image changes  -> deployed separately by CI over SSH (deploy-service.sh)
 #
 # Install (once, on the droplet):
 #   cp /opt/emer-ai-tools/deploy/systemd/emer-deploy-sync.* /etc/systemd/system/

@@ -4,10 +4,10 @@
 #
 # Differences vs the dev/prod compose:
 #  - emc publishes NO host ports (RPC/p2p stay on the internal docker network).
-#  - adapter + edge run from published images and AUTO-UPDATE via Watchtower
-#    (label-scoped: only the two labeled containers are touched).
-#  - emc (emercoin/core) is deliberately NOT labelled -> never auto-updated; the
-#    wallet/node is released manually (run ./redeploy.sh after a node-v* release).
+#  - adapter + edge run from published images, deployed on release by CI over SSH
+#    (deploy/deploy-service.sh) — one pull+recreate per release, no Watchtower and
+#    no registry polling, so no rollout wait and no Docker Hub rate-limit cost.
+#  - emc (emercoin/core) is released manually (run ./redeploy.sh after a node-v*).
 #  - caddy fronts edge on 80/443; origin is firewalled to Cloudflare IPs.
 #
 # Requires deploy/.env (chmod 600) with ADAPTER_INTERNAL_KEY, EDGE_JWT_SECRET,
@@ -42,8 +42,6 @@ services:
     image: emercoin/rest-api:latest
     container_name: emer-adapter
     restart: unless-stopped
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
     environment:
       ADAPTER_RPC_URL: http://emc:6662
       ADAPTER_RPC_USER: emcrpc
@@ -55,8 +53,6 @@ services:
     image: emercoin/edge:latest
     container_name: emer-edge
     restart: unless-stopped
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
     environment:
       EDGE_ADAPTER_URL: http://emer-adapter:8000
       EDGE_ADAPTER_KEY: ${ADAPTER_INTERNAL_KEY:-}
@@ -82,17 +78,3 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on: [edge]
-
-  # Auto-updates ONLY the label-enabled containers (adapter, edge) when their
-  # :latest image moves in the registry. Polls hourly; prunes old images.
-  watchtower:
-    image: containrrr/watchtower
-    container_name: emer-watchtower
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    # 600s poll: caps image-rollout latency at ~10 min (vs the old hourly) while
-    # staying pull-based and anonymous-safe under Docker Hub's unauth rate limit
-    # (only 2 labelled images checked). For sub-2-min rollout, add org Docker Hub
-    # creds (REPO_USER/REPO_PASS) before dropping this lower.
-    command: --label-enable --cleanup --interval 600
