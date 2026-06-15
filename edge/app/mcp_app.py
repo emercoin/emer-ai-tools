@@ -5,14 +5,16 @@ can use the Emercoin chain as an identity + memory layer without a local install
 Stateless HTTP with JSON responses.
 
 Auth: OAuth 2.1 (DCR + authorization-code + PKCE + refresh) via `oauth_provider`,
-delegating user login to GitHub. All tools require a valid token; the issued access
-token is our session JWT, so a token pasted from /login works as a Bearer too. The
-authenticated caller is read from the SDK auth context; the User-Agent (for stats)
-comes from the request Context. Tools carry parameter descriptions, output schemas
-and behaviour annotations. Shared clients are injected via `configure()`.
+delegating user login to GitHub. Discovery and read tools (`node_status`,
+`read_record`, `whoami`) are open; write tools require a valid token. The issued
+access token is our session JWT, so a token pasted from /login works as a Bearer
+too. The authenticated caller is read from the SDK auth context; the User-Agent
+(for stats) comes from the request Context. Tools carry parameter descriptions,
+output schemas and behaviour annotations. Shared clients via `configure()`.
 """
 from __future__ import annotations
 
+import json
 import logging
 from typing import Annotated, TypedDict
 
@@ -64,14 +66,29 @@ def _principal_optional() -> Principal | None:
     return Principal(int(at.subject), claims.get("login", ""), claims.get("tariff", "free"))
 
 
+# Actionable, machine-readable payload returned (as the tool error text) when a
+# write tool is called without a session. JSON so an agent can parse the reason and
+# the remedy rather than scrape prose; `isError` stays true so it is never mistaken
+# for a successful write.
+_AUTH_REQUIRED = {
+    "error": "authentication_required",
+    "message": "This tool writes to the Emercoin chain under your identity, so it needs a signed-in session.",
+    "how_to_fix": (
+        "Connect over OAuth — your MCP client signs in with GitHub automatically "
+        "(the server advertises the flow at /.well-known/oauth-protected-resource). "
+        "Once the session carries a Bearer token, retry this call."
+    ),
+    "open_without_auth": ["node_status", "read_record", "whoami"],
+    "docs": "https://ai.emercoin.com/docs/mcp.md",
+}
+
+
 def _principal() -> Principal:
-    """The authenticated caller; raises if no valid token. Write tools require this."""
+    """The authenticated caller; raises a structured auth-required error if no valid
+    token. Write tools require this (the error rides as `isError: true` tool text)."""
     p = _principal_optional()
     if p is None:
-        raise ValueError(
-            "authentication required: sign in with GitHub via OAuth to use write tools "
-            "(read tools are open). Your MCP client handles the OAuth flow."
-        )
+        raise ValueError(json.dumps(_AUTH_REQUIRED))
     return p
 
 
@@ -115,11 +132,15 @@ class NvsRecord(TypedDict, total=False):
     pending: dict | None
 
 
-class Identity(TypedDict):
-    """A resolved GitHub-rooted agent identity."""
-    github_id: int
-    github_login: str
-    tariff: str
+class WhoAmI(TypedDict, total=False):
+    """The current session's identity. `authenticated` is always present; the
+    GitHub-rooted fields are filled only when signed in, and `hint` only when not
+    (nullable so the SDK may serialise the absent ones as null)."""
+    authenticated: bool
+    github_id: int | None
+    github_login: str | None
+    tariff: str | None
+    hint: str | None
 
 
 class WriteResult(TypedDict):
@@ -132,11 +153,12 @@ mcp = FastMCP(
     "emercoin-agent",
     instructions=(
         "Use the Emercoin blockchain as an identity + memory layer for AI agents. "
-        "Read tools (node_status, read_record) are open to everyone — no sign-in. "
-        "Write tools (register_identity, store_memory) and whoami require a GitHub "
+        "Read tools (node_status, read_record, whoami) are open to everyone — no "
+        "sign-in. Write tools (register_identity, store_memory) require a GitHub "
         "sign-in via OAuth, which your MCP client performs; on the FREE tier writes "
-        "are rate-limited per minute. Then register your identity and store "
-        "verifiable hashes of your work as NVS records."
+        "are rate-limited per minute. Typical flow: whoami → register_identity(address) "
+        "→ store_memory(hash) → read_record(name). Records read back as `pending` and "
+        "become `confirmed` after the next block (~10 min)."
     ),
     stateless_http=True,
     json_response=True,
@@ -164,7 +186,10 @@ mcp = FastMCP(
     structured_output=True,
 )
 async def node_status(ctx: Context) -> NodeStatus:
-    """Emercoin node version, block height and chain sync status. No sign-in required."""
+    """Report the Emercoin node's version, block height, header height, peer
+    connections and sync state (`synced` true once block == header height).
+    Read-only, no sign-in required, no parameters. Call it to confirm the node is
+    healthy and fully synced before relying on reads or writes."""
     await _record(ctx, "node_status", _principal_optional())
     return await _adapter.status()  # type: ignore[return-value]
 
@@ -180,11 +205,17 @@ async def read_record(
     ctx: Context,
     name: Annotated[
         str,
-        Field(description="Full NVS record name, e.g. 'ai:gh:<github_id>:mem:<sha256-hex>'."),
+        Field(description=(
+            "Full NVS record name to read. Identity records are 'ai:gh:<github_id>' "
+            "(e.g. 'ai:gh:3772563'); memory records are "
+            "'ai:gh:<github_id>:mem:<sha256-hex>'. Any existing NVS name works."
+        )),
     ],
 ) -> NvsRecord:
-    """Read an Emercoin NVS record by its full name. Returns the confirmed record,
-    or a `pending` record if the write is still in the mempool. No sign-in required."""
+    """Read one Emercoin NVS (Name-Value Storage) record by its full name. Returns
+    the confirmed on-chain record, or a `pending` one still in the mempool — the
+    `status` field ('confirmed' | 'pending') distinguishes them. Read-only, no
+    sign-in required. Returns null fields for a name that does not exist."""
     await _record(ctx, "read_record", _principal_optional())
     return await _adapter.read(name)  # type: ignore[return-value]
 
@@ -196,11 +227,27 @@ async def read_record(
     ),
     structured_output=True,
 )
-async def whoami(ctx: Context) -> Identity:
-    """Return your authenticated GitHub-rooted identity (id, login, tariff)."""
-    p = _principal()
+async def whoami(ctx: Context) -> WhoAmI:
+    """Report the current session's identity. Read-only, no sign-in required: an
+    anonymous session gets `{authenticated: false}` with a hint (not an error),
+    a signed-in one gets `{authenticated: true}` plus the GitHub-rooted id, login
+    and tariff. Call it to confirm who you are before writing records."""
+    p = _principal_optional()
     await _record(ctx, "whoami", p)
-    return {"github_id": p.github_id, "github_login": p.github_login, "tariff": p.tariff}
+    if p is None:
+        return {
+            "authenticated": False,
+            "hint": (
+                "Anonymous session. Sign in with GitHub via your MCP client's OAuth flow "
+                "to get an identity and use the write tools; read tools work without it."
+            ),
+        }
+    return {
+        "authenticated": True,
+        "github_id": p.github_id,
+        "github_login": p.github_login,
+        "tariff": p.tariff,
+    }
 
 
 @mcp.tool(
@@ -218,15 +265,26 @@ async def register_identity(
     ctx: Context,
     address: Annotated[
         str,
-        Field(description="Your Emercoin address to bind to your GitHub identity (the anchor for signature login)."),
+        Field(description=(
+            "Emercoin address to bind to your GitHub identity, e.g. 'EVfAn...'. It is "
+            "the anchor for later signature login — you must control its key (control "
+            "is proven when you sign a challenge at login, not here)."
+        )),
     ],
     metadata: Annotated[
         dict | None,
-        Field(default=None, description="Optional free-form JSON metadata to store with the identity record."),
+        Field(default=None, description=(
+            "Optional JSON object stored verbatim in the identity record, "
+            "e.g. {\"agent\": \"my-bot\", \"url\": \"https://...\"}. Omit if unused."
+        )),
     ] = None,
 ) -> WriteResult:
-    """Register or rotate your on-chain identity record `ai:gh:<github_id>`, binding
-    an Emercoin address to your GitHub identity. Returns the name and transaction id."""
+    """Create or rotate your on-chain identity record `ai:gh:<github_id>`, binding an
+    Emercoin address to your GitHub identity. Requires a signed-in session (OAuth).
+    Writes one NVS transaction paid by the gateway (you need no EMC); the record
+    reads back as `pending` at once and `confirmed` after the next block (~10 min
+    on average). Idempotent — calling again rebinds the address. Returns the record
+    name and the transaction id."""
     p = _principal()
     await _record(ctx, "register_identity", p)
     await _ratelimiter.check_and_incr(p.github_id, settings.free_tier_writes_per_min)
@@ -256,15 +314,27 @@ async def store_memory(
     ctx: Context,
     content_hash: Annotated[
         str,
-        Field(description="Content hash (e.g. SHA-256 hex) of the artifact/memory; the body itself is stored off-chain."),
+        Field(description=(
+            "Hash of the artifact/memory, e.g. a SHA-256 hex digest. It becomes the "
+            "record's ':mem:<hash>' suffix; the content itself stays off-chain "
+            "(e.g. IPFS) — only this fingerprint is anchored."
+        )),
     ],
     metadata: Annotated[
         dict | None,
-        Field(default=None, description="Optional free-form JSON metadata (note, source, tags, …)."),
+        Field(default=None, description=(
+            "Optional JSON object stored with the record (note, source, tags, …). "
+            "Omit if unused."
+        )),
     ] = None,
 ) -> WriteResult:
-    """Store a memory record `ai:gh:<github_id>:mem:<content_hash>` on-chain — a
-    verifiable fingerprint of an artifact. Returns the name and transaction id."""
+    """Anchor a memory/artifact on-chain as the NVS record
+    `ai:gh:<github_id>:mem:<content_hash>` — a tamper-evident fingerprint others can
+    verify later. Requires a signed-in session (OAuth) and counts against the
+    FREE-tier per-minute write limit. Writes one NVS transaction paid by the gateway;
+    reads back `pending` at once, `confirmed` after the next block (~10 min). Not
+    idempotent — each distinct hash is a new record. Register your identity first.
+    Returns the record name and the transaction id."""
     p = _principal()
     await _record(ctx, "store_memory", p)
     await _ratelimiter.check_and_incr(p.github_id, settings.free_tier_writes_per_min)
