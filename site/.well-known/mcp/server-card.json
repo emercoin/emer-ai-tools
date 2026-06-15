@@ -13,7 +13,7 @@
     {
       "name": "node_status",
       "title": "Node status",
-      "description": "Emercoin node version, block height and chain sync status. No sign-in required.",
+      "description": "Report the Emercoin node's version, block height, header height, peer\n    connections and sync state (`synced` true once block == header height).\n    Read-only, no sign-in required, no parameters. Call it to confirm the node is\n    healthy and fully synced before relying on reads or writes.",
       "inputSchema": {
         "properties": {},
         "title": "node_statusArguments",
@@ -107,11 +107,11 @@
     {
       "name": "read_record",
       "title": "Read NVS record",
-      "description": "Read an Emercoin NVS record by its full name. Returns the confirmed record,\n    or a `pending` record if the write is still in the mempool. No sign-in required.",
+      "description": "Read one Emercoin NVS (Name-Value Storage) record by its full name. Returns\n    the confirmed on-chain record, or a `pending` one still in the mempool — the\n    `status` field ('confirmed' | 'pending') distinguishes them. Read-only, no\n    sign-in required. Returns null fields for a name that does not exist.",
       "inputSchema": {
         "properties": {
           "name": {
-            "description": "Full NVS record name, e.g. 'ai:gh:<github_id>:mem:<sha256-hex>'.",
+            "description": "Full NVS record name to read. Identity records are 'ai:gh:<github_id>' (e.g. 'ai:gh:3772563'); memory records are 'ai:gh:<github_id>:mem:<sha256-hex>'. Any existing NVS name works.",
             "title": "Name",
             "type": "string"
           }
@@ -271,7 +271,7 @@
     {
       "name": "whoami",
       "title": "Who am I",
-      "description": "Return your authenticated GitHub-rooted identity (id, login, tariff).",
+      "description": "Report the current session's identity. Read-only, no sign-in required: an\n    anonymous session gets `{authenticated: false}` with a hint (not an error),\n    a signed-in one gets `{authenticated: true}` plus the GitHub-rooted id, login\n    and tariff. Call it to confirm who you are before writing records.",
       "inputSchema": {
         "properties": {},
         "title": "whoamiArguments",
@@ -279,25 +279,61 @@
       },
       "outputSchema": {
         "properties": {
+          "authenticated": {
+            "default": null,
+            "title": "Authenticated",
+            "type": "boolean"
+          },
           "github_id": {
-            "title": "Github Id",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Github Id"
           },
           "github_login": {
-            "title": "Github Login",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Github Login"
           },
           "tariff": {
-            "title": "Tariff",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tariff"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Hint"
           }
         },
-        "required": [
-          "github_id",
-          "github_login",
-          "tariff"
-        ],
-        "title": "Identity",
+        "title": "WhoAmI",
         "type": "object"
       },
       "annotations": {
@@ -310,11 +346,11 @@
     {
       "name": "register_identity",
       "title": "Register identity",
-      "description": "Register or rotate your on-chain identity record `ai:gh:<github_id>`, binding\n    an Emercoin address to your GitHub identity. Returns the name and transaction id.",
+      "description": "Create or rotate your on-chain identity record `ai:gh:<github_id>`, binding an\n    Emercoin address to your GitHub identity. Requires a signed-in session (OAuth).\n    Writes one NVS transaction paid by the gateway (you need no EMC); the record\n    reads back as `pending` at once and `confirmed` after the next block (~10 min\n    on average). Idempotent — calling again rebinds the address. Returns the record\n    name and the transaction id.",
       "inputSchema": {
         "properties": {
           "address": {
-            "description": "Your Emercoin address to bind to your GitHub identity (the anchor for signature login).",
+            "description": "Emercoin address to bind to your GitHub identity, e.g. 'EVfAn...'. It is the anchor for later signature login — you must control its key (control is proven when you sign a challenge at login, not here).",
             "title": "Address",
             "type": "string"
           },
@@ -329,7 +365,7 @@
               }
             ],
             "default": null,
-            "description": "Optional free-form JSON metadata to store with the identity record.",
+            "description": "Optional JSON object stored verbatim in the identity record, e.g. {\"agent\": \"my-bot\", \"url\": \"https://...\"}. Omit if unused.",
             "title": "Metadata"
           }
         },
@@ -368,11 +404,11 @@
     {
       "name": "store_memory",
       "title": "Store memory",
-      "description": "Store a memory record `ai:gh:<github_id>:mem:<content_hash>` on-chain \u2014 a\n    verifiable fingerprint of an artifact. Returns the name and transaction id.",
+      "description": "Anchor a memory/artifact on-chain as the NVS record\n    `ai:gh:<github_id>:mem:<content_hash>` — a tamper-evident fingerprint others can\n    verify later. Requires a signed-in session (OAuth) and counts against the\n    FREE-tier per-minute write limit. Writes one NVS transaction paid by the gateway;\n    reads back `pending` at once, `confirmed` after the next block (~10 min). Not\n    idempotent — each distinct hash is a new record. Register your identity first.\n    Returns the record name and the transaction id.",
       "inputSchema": {
         "properties": {
           "content_hash": {
-            "description": "Content hash (e.g. SHA-256 hex) of the artifact/memory; the body itself is stored off-chain.",
+            "description": "Hash of the artifact/memory, e.g. a SHA-256 hex digest. It becomes the record's ':mem:<hash>' suffix; the content itself stays off-chain (e.g. IPFS) — only this fingerprint is anchored.",
             "title": "Content Hash",
             "type": "string"
           },
@@ -387,7 +423,7 @@
               }
             ],
             "default": null,
-            "description": "Optional free-form JSON metadata (note, source, tags, \u2026).",
+            "description": "Optional JSON object stored with the record (note, source, tags, …). Omit if unused.",
             "title": "Metadata"
           }
         },
