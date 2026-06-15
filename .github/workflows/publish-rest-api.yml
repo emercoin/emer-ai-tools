@@ -59,10 +59,14 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./adapter
+          # Multi-arch kept (downstream compose files import this image); the GHA cache
+          # reuses the uv-installed deps layer so code-only changes rebuild fast.
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       # Roll the new image on the droplet immediately: SSH in and pull+recreate just
       # the adapter container. Skipped (not failed) when DEPLOY_HOST is unset.

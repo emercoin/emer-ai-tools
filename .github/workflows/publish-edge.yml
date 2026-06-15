@@ -62,10 +62,15 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./edge
-          platforms: linux/amd64,linux/arm64
+          # edge runs only on the droplet (amd64) -> single-arch (no slow arm64 QEMU
+          # emulation); the GHA cache reuses the uv-installed deps layer across runs,
+          # so an unchanged requirements.txt rebuilds only the COPY app layer.
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       # Roll the new image on the droplet immediately: SSH in and pull+recreate just
       # the edge container. Skipped (not failed) when DEPLOY_HOST is unset.
