@@ -91,4 +91,8 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: --label-enable --cleanup --interval 3600
+    # 600s poll: caps image-rollout latency at ~10 min (vs the old hourly) while
+    # staying pull-based and anonymous-safe under Docker Hub's unauth rate limit
+    # (only 2 labelled images checked). For sub-2-min rollout, add org Docker Hub
+    # creds (REPO_USER/REPO_PASS) before dropping this lower.
+    command: --label-enable --cleanup --interval 600
