@@ -17,11 +17,14 @@ import logging
 from typing import Annotated, TypedDict
 
 from mcp.server.auth.middleware.auth_context import get_access_token
+from mcp.server.auth.middleware.bearer_auth import RequireAuthMiddleware
 from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 from pydantic import AnyHttpUrl, Field
+from starlette.applications import Starlette
+from starlette.routing import Route
 
 from . import names
 from .auth import Principal
@@ -48,23 +51,38 @@ def configure(adapter: AdapterClient, ratelimiter: RateLimiter, stats: Stats, gi
     oauth_provider.configure(github, settings.redis_url)
 
 
-def _principal() -> Principal:
-    """The authenticated caller, from the SDK's validated access token."""
+def _principal_optional() -> Principal | None:
+    """The authenticated caller if a valid token was presented, else None.
+
+    Read/discovery tools are open (no transport-level auth gate — see
+    `streamable_app`); they tolerate None. Write tools require auth and call
+    `_principal()` instead."""
     at = get_access_token()
-    if at is None:  # the auth middleware should have rejected — defensive
-        raise ValueError("authentication required")
+    if at is None:
+        return None
     claims = at.claims or {}
     return Principal(int(at.subject), claims.get("login", ""), claims.get("tariff", "free"))
 
 
-async def _record(ctx: Context, tool: str, principal: Principal) -> None:
+def _principal() -> Principal:
+    """The authenticated caller; raises if no valid token. Write tools require this."""
+    p = _principal_optional()
+    if p is None:
+        raise ValueError(
+            "authentication required: sign in with GitHub via OAuth to use write tools "
+            "(read tools are open). Your MCP client handles the OAuth flow."
+        )
+    return p
+
+
+async def _record(ctx: Context, tool: str, principal: Principal | None) -> None:
     ua = ""
     try:
         ua = ctx.request_context.request.headers.get("user-agent", "")
     except Exception:  # noqa: BLE001
         pass
     if _stats is not None:
-        await _stats.record_call(tool, principal.github_id, ua)
+        await _stats.record_call(tool, principal.github_id if principal else None, ua)
 
 
 # --- output schemas (drive each tool's outputSchema) -----------------------
@@ -114,8 +132,11 @@ mcp = FastMCP(
     "emercoin-agent",
     instructions=(
         "Use the Emercoin blockchain as an identity + memory layer for AI agents. "
-        "Sign in with GitHub (your MCP client handles the OAuth flow). Then register "
-        "your identity and store verifiable hashes of your work as NVS records."
+        "Read tools (node_status, read_record) are open to everyone — no sign-in. "
+        "Write tools (register_identity, store_memory) and whoami require a GitHub "
+        "sign-in via OAuth, which your MCP client performs; on the FREE tier writes "
+        "are rate-limited per minute. Then register your identity and store "
+        "verifiable hashes of your work as NVS records."
     ),
     stateless_http=True,
     json_response=True,
@@ -143,8 +164,8 @@ mcp = FastMCP(
     structured_output=True,
 )
 async def node_status(ctx: Context) -> NodeStatus:
-    """Emercoin node version, block height and chain sync status."""
-    await _record(ctx, "node_status", _principal())
+    """Emercoin node version, block height and chain sync status. No sign-in required."""
+    await _record(ctx, "node_status", _principal_optional())
     return await _adapter.status()  # type: ignore[return-value]
 
 
@@ -163,8 +184,8 @@ async def read_record(
     ],
 ) -> NvsRecord:
     """Read an Emercoin NVS record by its full name. Returns the confirmed record,
-    or a `pending` record if the write is still in the mempool."""
-    await _record(ctx, "read_record", _principal())
+    or a `pending` record if the write is still in the mempool. No sign-in required."""
+    await _record(ctx, "read_record", _principal_optional())
     return await _adapter.read(name)  # type: ignore[return-value]
 
 
@@ -251,3 +272,28 @@ async def store_memory(
     value = {"github_id": p.github_id, "content_hash": content_hash, "metadata": metadata or {}}
     res = await _adapter.write(name, value, settings.nvs_default_days)
     return {"name": res["name"], "txid": res["result"]}
+
+
+def streamable_app() -> Starlette:
+    """The MCP streamable-HTTP app with the transport-level auth gate removed.
+
+    By default the SDK wraps the `/mcp` route in `RequireAuthMiddleware`, which 401s
+    every unauthenticated request — including the `initialize`/`tools/list` handshake.
+    That blocks open discovery and read access (and makes registry health-checks like
+    Glama's headless prober report the connector as Unhealthy, since they can't
+    complete an interactive OAuth flow).
+
+    We unwrap that one middleware so anonymous callers reach the transport. The
+    app-level `AuthenticationMiddleware` + `AuthContextMiddleware` stay, so a Bearer
+    token is still validated and exposed via `get_access_token()` when present — which
+    is how the write tools enforce auth per-call through `_principal()`. OAuth routes
+    and protected-resource metadata are untouched."""
+    app = mcp.streamable_http_app()
+    for route in app.routes:
+        if (
+            isinstance(route, Route)
+            and route.path == mcp.settings.streamable_http_path
+            and isinstance(route.app, RequireAuthMiddleware)
+        ):
+            route.app = route.app.app  # drop the 401-for-anonymous gate
+    return app

@@ -18,6 +18,7 @@ from .auth import Principal, current_principal, issue_jwt, resolve_github_token
 from .mcp_app import configure as mcp_configure
 from .mcp_app import mcp as mcp_server
 from .mcp_app import oauth_provider as mcp_oauth
+from .mcp_app import streamable_app as mcp_streamable_app
 from .challenge import ChallengeStore
 from .client import AdapterClient, AdapterError
 from .config import settings
@@ -499,4 +500,6 @@ async def read_nvs(name: str, adapter: AdapterClient = Depends(get_adapter)) -> 
 # root so its OAuth routes (/authorize, /token, /register, /.well-known/*) and the
 # /mcp transport sit at the domain root the spec expects, while every edge route
 # above is matched first; only unmatched paths fall through to the MCP app.
-app.mount("/", mcp_server.streamable_http_app())
+# `mcp_streamable_app` drops the transport-level auth gate so discovery + read tools
+# are open to anyone; write tools still enforce OAuth per-call (see mcp_app).
+app.mount("/", mcp_streamable_app())

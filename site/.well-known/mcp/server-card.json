@@ -4,7 +4,7 @@
     "version": "0.2.0"
   },
   "authentication": {
-    "required": true,
+    "required": false,
     "schemes": [
       "oauth2"
     ]
@@ -13,7 +13,7 @@
     {
       "name": "node_status",
       "title": "Node status",
-      "description": "Emercoin node version, block height and chain sync status.",
+      "description": "Emercoin node version, block height and chain sync status. No sign-in required.",
       "inputSchema": {
         "properties": {},
         "title": "node_statusArguments",
@@ -107,7 +107,7 @@
     {
       "name": "read_record",
       "title": "Read NVS record",
-      "description": "Read an Emercoin NVS record by its full name. Returns the confirmed record,\n    or a `pending` record if the write is still in the mempool.",
+      "description": "Read an Emercoin NVS record by its full name. Returns the confirmed record,\n    or a `pending` record if the write is still in the mempool. No sign-in required.",
       "inputSchema": {
         "properties": {
           "name": {
