@@ -188,8 +188,9 @@ mcp = FastMCP(
 async def node_status(ctx: Context) -> NodeStatus:
     """Report the Emercoin node's version, block height, header height, peer
     connections and sync state (`synced` true once block == header height).
-    Read-only, no sign-in required, no parameters. Call it to confirm the node is
-    healthy and fully synced before relying on reads or writes."""
+    Read-only, no sign-in required, no parameters. Call it first in a session to
+    confirm the node is healthy and fully synced before trusting `read_record` or
+    writing with `register_identity` / `store_memory`."""
     await _record(ctx, "node_status", _principal_optional())
     return await _adapter.status()  # type: ignore[return-value]
 
@@ -212,10 +213,13 @@ async def read_record(
         )),
     ],
 ) -> NvsRecord:
-    """Read one Emercoin NVS (Name-Value Storage) record by its full name. Returns
-    the confirmed on-chain record, or a `pending` one still in the mempool — the
-    `status` field ('confirmed' | 'pending') distinguishes them. Read-only, no
-    sign-in required. Returns null fields for a name that does not exist."""
+    """Read one Emercoin NVS (Name-Value Storage) record by its full name — an
+    agent's identity (`ai:gh:<github_id>`) or a memory
+    (`ai:gh:<github_id>:mem:<hash>`) written by `register_identity` / `store_memory`.
+    Returns the confirmed on-chain record, or a `pending` one still in the mempool —
+    the `status` field ('confirmed' | 'pending') distinguishes them. Read-only, no
+    sign-in required; use `whoami` to find your own github_id. Returns null fields
+    for a name that does not exist."""
     await _record(ctx, "read_record", _principal_optional())
     return await _adapter.read(name)  # type: ignore[return-value]
 
@@ -231,7 +235,8 @@ async def whoami(ctx: Context) -> WhoAmI:
     """Report the current session's identity. Read-only, no sign-in required: an
     anonymous session gets `{authenticated: false}` with a hint (not an error),
     a signed-in one gets `{authenticated: true}` plus the GitHub-rooted id, login
-    and tariff. Call it to confirm who you are before writing records."""
+    and tariff. Call it to confirm who you are before `register_identity` /
+    `store_memory`; an anonymous caller must sign in (GitHub OAuth) first."""
     p = _principal_optional()
     await _record(ctx, "whoami", p)
     if p is None:
@@ -280,11 +285,13 @@ async def register_identity(
     ] = None,
 ) -> WriteResult:
     """Create or rotate your on-chain identity record `ai:gh:<github_id>`, binding an
-    Emercoin address to your GitHub identity. Requires a signed-in session (OAuth).
-    Writes one NVS transaction paid by the gateway (you need no EMC); the record
-    reads back as `pending` at once and `confirmed` after the next block (~10 min
-    on average). Idempotent — calling again rebinds the address. Returns the record
-    name and the transaction id."""
+    Emercoin address to your GitHub identity. Requires a signed-in session (OAuth)
+    and counts against the FREE-tier per-minute write limit. Run `whoami` first to
+    confirm you are signed in; anchor memories under this identity afterwards with
+    `store_memory`. Writes one NVS transaction paid by the gateway (you need no EMC);
+    the record reads back as `pending` at once and `confirmed` after the next block
+    (~10 min on average). Idempotent — calling again rebinds the address. Returns the
+    record name and the transaction id."""
     p = _principal()
     await _record(ctx, "register_identity", p)
     await _ratelimiter.check_and_incr(p.github_id, settings.free_tier_writes_per_min)

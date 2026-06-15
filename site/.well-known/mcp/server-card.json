@@ -13,7 +13,7 @@
     {
       "name": "node_status",
       "title": "Node status",
-      "description": "Report the Emercoin node's version, block height, header height, peer\n    connections and sync state (`synced` true once block == header height).\n    Read-only, no sign-in required, no parameters. Call it to confirm the node is\n    healthy and fully synced before relying on reads or writes.",
+      "description": "Report the Emercoin node's version, block height, header height, peer\nconnections and sync state (`synced` true once block == header height).\nRead-only, no sign-in required, no parameters. Call it first in a session to\nconfirm the node is healthy and fully synced before trusting `read_record` or\nwriting with `register_identity` / `store_memory`.",
       "inputSchema": {
         "properties": {},
         "title": "node_statusArguments",
@@ -107,7 +107,7 @@
     {
       "name": "read_record",
       "title": "Read NVS record",
-      "description": "Read one Emercoin NVS (Name-Value Storage) record by its full name. Returns\n    the confirmed on-chain record, or a `pending` one still in the mempool — the\n    `status` field ('confirmed' | 'pending') distinguishes them. Read-only, no\n    sign-in required. Returns null fields for a name that does not exist.",
+      "description": "Read one Emercoin NVS (Name-Value Storage) record by its full name — an\nagent's identity (`ai:gh:<github_id>`) or a memory\n(`ai:gh:<github_id>:mem:<hash>`) written by `register_identity` / `store_memory`.\nReturns the confirmed on-chain record, or a `pending` one still in the mempool —\nthe `status` field ('confirmed' | 'pending') distinguishes them. Read-only, no\nsign-in required; use `whoami` to find your own github_id. Returns null fields\nfor a name that does not exist.",
       "inputSchema": {
         "properties": {
           "name": {
@@ -271,7 +271,7 @@
     {
       "name": "whoami",
       "title": "Who am I",
-      "description": "Report the current session's identity. Read-only, no sign-in required: an\n    anonymous session gets `{authenticated: false}` with a hint (not an error),\n    a signed-in one gets `{authenticated: true}` plus the GitHub-rooted id, login\n    and tariff. Call it to confirm who you are before writing records.",
+      "description": "Report the current session's identity. Read-only, no sign-in required: an\nanonymous session gets `{authenticated: false}` with a hint (not an error),\na signed-in one gets `{authenticated: true}` plus the GitHub-rooted id, login\nand tariff. Call it to confirm who you are before `register_identity` /\n`store_memory`; an anonymous caller must sign in (GitHub OAuth) first.",
       "inputSchema": {
         "properties": {},
         "title": "whoamiArguments",
@@ -346,7 +346,7 @@
     {
       "name": "register_identity",
       "title": "Register identity",
-      "description": "Create or rotate your on-chain identity record `ai:gh:<github_id>`, binding an\n    Emercoin address to your GitHub identity. Requires a signed-in session (OAuth).\n    Writes one NVS transaction paid by the gateway (you need no EMC); the record\n    reads back as `pending` at once and `confirmed` after the next block (~10 min\n    on average). Idempotent — calling again rebinds the address. Returns the record\n    name and the transaction id.",
+      "description": "Create or rotate your on-chain identity record `ai:gh:<github_id>`, binding an\nEmercoin address to your GitHub identity. Requires a signed-in session (OAuth)\nand counts against the FREE-tier per-minute write limit. Run `whoami` first to\nconfirm you are signed in; anchor memories under this identity afterwards with\n`store_memory`. Writes one NVS transaction paid by the gateway (you need no EMC);\nthe record reads back as `pending` at once and `confirmed` after the next block\n(~10 min on average). Idempotent — calling again rebinds the address. Returns the\nrecord name and the transaction id.",
       "inputSchema": {
         "properties": {
           "address": {
@@ -404,7 +404,7 @@
     {
       "name": "store_memory",
       "title": "Store memory",
-      "description": "Anchor a memory/artifact on-chain as the NVS record\n    `ai:gh:<github_id>:mem:<content_hash>` — a tamper-evident fingerprint others can\n    verify later. Requires a signed-in session (OAuth) and counts against the\n    FREE-tier per-minute write limit. Writes one NVS transaction paid by the gateway;\n    reads back `pending` at once, `confirmed` after the next block (~10 min). Not\n    idempotent — each distinct hash is a new record. Register your identity first.\n    Returns the record name and the transaction id.",
+      "description": "Anchor a memory/artifact on-chain as the NVS record\n`ai:gh:<github_id>:mem:<content_hash>` — a tamper-evident fingerprint others can\nverify later. Requires a signed-in session (OAuth) and counts against the\nFREE-tier per-minute write limit. Writes one NVS transaction paid by the gateway;\nreads back `pending` at once, `confirmed` after the next block (~10 min). Not\nidempotent — each distinct hash is a new record. Register your identity first.\nReturns the record name and the transaction id.",
       "inputSchema": {
         "properties": {
           "content_hash": {
