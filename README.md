@@ -107,3 +107,7 @@ In this case, the blockchain database, wallet.dat and emercoin.conf are not dele
 docker volume rm emer_data
 ```
 Attention! this command also deletes **wallet.dat**
+
+## License
+
+MIT — see [LICENSE](LICENSE).
