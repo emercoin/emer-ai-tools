@@ -1,5 +1,5 @@
 ![](https://github.com/emercoin/emer-ai-tools/blob/main/docs/docker.png)
-[![smithery badge](https://smithery.ai/badge/mechnotech/emer-ai)](https://smithery.ai/servers/mechnotech/emer-ai)
+[![Smithery](https://img.shields.io/badge/Smithery-Verified-green?style=flat-square&logo=github)](https://smithery.ai/servers/mechnotech/emer-ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 # Emercoin + AI agent tools (`emer-ai-tools`)
