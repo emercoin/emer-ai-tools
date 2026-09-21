@@ -11,31 +11,60 @@ Connect directly to the **hosted** server over Streamable HTTP — nothing to in
 - **URL:** `https://ai.emercoin.com/mcp`
 
 ### Getting started
-1. **Add the server** — point your MCP client at the URL above. The **read tools**
-   (`node_status`, `read_record`) work **immediately, with no token**.
-2. **For write tools** (`store_memory`, `register_identity`) add a session token:
-   open <https://ai.emercoin.com/login>, sign in with GitHub, copy the token shown,
-   and put it in the `Authorization: Bearer <token>` header.
+1. **Add the server as a connector** — point your MCP client at the URL above and
+   nothing else. Sign-in happens automatically: on first use of a write tool your
+   client runs the OAuth flow (dynamic client registration + authorization code +
+   PKCE) and redirects you to GitHub to authorize; the edge issues an access token
+   good for the session plus a refresh token good for 30 days, so you stay signed
+   in across reconnects. The **read tools** (`node_status`, `read_record`,
+   `whoami`) work **immediately, with no sign-in at all**.
 
 ```jsonc
-// Claude Code / Desktop MCP config (HTTP transport)
+// Claude Code / Desktop MCP config (HTTP transport) — no token needed, OAuth handles it
 {
   "mcpServers": {
     "emercoin-agent": {
-      "url": "https://ai.emercoin.com/mcp",
-      "headers": { "Authorization": "Bearer <token from /login, optional for reads>" }
+      "url": "https://ai.emercoin.com/mcp"
     }
   }
 }
 ```
 
-> The manual token is short-lived. **Browser-based OAuth login** (the client signs
-> you in automatically — no copy-paste, with token refresh) is rolling out; once
-> live, no manual token step is needed.
+2. **No OAuth in your client?** Fall back to a manual token: open
+   <https://ai.emercoin.com/login>, sign in with GitHub, copy the token shown, and
+   put it in the `Authorization: Bearer <token>` header. It's the same session JWT
+   the OAuth flow issues, so both paths are fully interchangeable — but a manual
+   token is short-lived and isn't refreshed for you, so OAuth is the path to prefer
+   whenever your client supports it.
+
+```jsonc
+// Manual-token fallback
+{
+  "mcpServers": {
+    "emercoin-agent": {
+      "url": "https://ai.emercoin.com/mcp",
+      "headers": { "Authorization": "Bearer <token from /login>" }
+    }
+  }
+}
+```
 
 Prefer to run it yourself? Use the local stdio server below.
 
-## Tools
+## Tools — remote (hosted, OAuth)
+
+| Tool | Auth | What it does |
+|------|------|--------------|
+| `node_status` | open | node sync/height (`GET /status`) |
+| `read_record` | open | read any NVS record |
+| `whoami` | open | current session identity (`{authenticated: false}` with a sign-in hint until you're signed in) |
+| `register_identity` | sign-in required | register the `ai:gh:<id>` identity record |
+| `store_memory` | sign-in required | write one memory record (`ai:gh:<id>:mem:<hash>`) |
+
+## Tools — local (stdio)
+
+The local server swaps OAuth (no browser redirect to catch outside a browser) for
+device-flow / manual-token login, and adds an atomic batch-write tool:
 
 | Tool | What it does |
 |------|--------------|
@@ -68,6 +97,14 @@ to `http://localhost:8000` for local development.)
 
 ## Typical flow
 
+**Remote (hosted, OAuth):**
+1. `node_status` — confirm the chain is synced.
+2. `whoami` — check whether you're already signed in; if not, your client's OAuth
+   flow runs on the first write call.
+3. `register_identity` (once) and `store_memory` (ongoing).
+4. `read_record` — verify what's on-chain.
+
+**Local (stdio):**
 1. `node_status` — confirm the chain is synced.
 2. `login` — get a device code; the human authorizes it once at github.com/login/device.
 3. `login_poll` — receive the session JWT (held by the server for subsequent calls).

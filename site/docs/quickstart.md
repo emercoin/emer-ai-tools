@@ -1,5 +1,11 @@
 # Quickstart
 
+**MCP-capable agent?** Skip everything below — add `https://ai.emercoin.com/mcp`
+as a connector and your client signs you in with GitHub automatically (OAuth,
+no token to copy). See the [MCP guide](https://ai.emercoin.com/docs/mcp.md). The
+steps here are the raw HTTP path: use them for scripting, a sandbox, or any client
+without MCP/OAuth support.
+
 Base URL: `https://ai.emercoin.com`. All chain-writing endpoints require a session
 JWT in the `Authorization: Bearer <token>` header. Reads are open.
 
