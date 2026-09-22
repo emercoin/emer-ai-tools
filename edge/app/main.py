@@ -7,6 +7,7 @@ adapter. Agents use the chain as an identity + memory layer through this API.
 """
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -26,6 +27,12 @@ from .github import GitHubOAuth
 from .oauth_state import OAuthStateStore
 from .ratelimit import RateLimiter
 from .stats import Stats
+
+
+# httpx logs every outbound request at INFO, so each call the edge makes to the
+# adapter prints a line nobody reads. Keep the library quiet; edge.* loggers and
+# uvicorn's access log carry what matters.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 @asynccontextmanager

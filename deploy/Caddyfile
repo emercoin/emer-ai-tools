@@ -6,6 +6,31 @@
 #    is proxied to the edge.
 # The same logic is imported for http:// (CF "Flexible", origin :80) and :443
 # (tls internal; CF "Full", origin :443). Origin ports are firewalled to CF.
+# Access logging. One file per site, rolled by Caddy itself — `docker logs` is a
+# ring buffer, not a retention policy, and these files are the only usage numbers
+# we have (no JS analytics: agents do not run JS, and the project does not track).
+# The client IP is deliberately dropped: behind Cloudflare the real address rides
+# in Cf-Connecting-Ip, and keeping it would make these files personal data for no
+# gain — what is worth counting is which paths and which agents, not who.
+# Note: a Cloudflare cache HIT never reaches here, so anything cacheable is
+# undercounted. Bypass the cache for whatever must be counted exactly.
+(accesslog) {
+	log {
+		output file /var/log/caddy/{args[0]}.log {
+			roll_size 10MiB
+			roll_keep 5
+			roll_keep_for 720h
+		}
+		format filter {
+			wrap json
+			fields {
+				request>headers>Cf-Connecting-Ip delete
+				request>headers>X-Forwarded-For delete
+			}
+		}
+	}
+}
+
 (app) {
 	encode gzip
 	root * /srv/site
@@ -22,11 +47,13 @@
 }
 
 http://ai.emercoin.com {
+	import accesslog ai
 	import app
 }
 
 ai.emercoin.com {
 	tls internal
+	import accesslog ai
 	import app
 }
 
@@ -39,10 +66,12 @@ ai.emercoin.com {
 }
 
 http://swap.emercoin.com {
+	import accesslog swap
 	import swap
 }
 
 swap.emercoin.com {
 	tls internal
+	import accesslog swap
 	import swap
 }

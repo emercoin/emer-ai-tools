@@ -14,18 +14,30 @@
 # EDGE_GITHUB_CLIENT_ID, EDGE_GITHUB_CLIENT_SECRET, and node/emercoin.conf present.
 name: emercoin
 
+# Container stdout has no size limit under the default json-file driver, and it
+# grows until the disk does. Cap every service here rather than in a daemon-wide
+# /etc/docker/daemon.json: this is version-controlled, applies on the next
+# recreate, and needs no docker daemon restart.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 volumes:
   blockchain_data:
     name: emer_data
     external: true
   caddy_data:
   caddy_config:
+  caddy_logs:
 
 services:
   emc:
     image: emercoin/core:0.8.5
     container_name: emc
     restart: unless-stopped
+    logging: *logging
     volumes:
       - blockchain_data:/srv/emercoind
       - ../node/emercoin.conf:/srv/emercoind/emercoin.conf:ro
@@ -37,11 +49,13 @@ services:
     image: redis:7-alpine
     container_name: emer-redis
     restart: unless-stopped
+    logging: *logging
 
   adapter:
     image: emercoin/rest-api:latest
     container_name: emer-adapter
     restart: unless-stopped
+    logging: *logging
     environment:
       ADAPTER_RPC_URL: http://emc:6662
       ADAPTER_RPC_USER: emcrpc
@@ -53,8 +67,14 @@ services:
     image: emercoin/edge:latest
     container_name: emer-edge
     restart: unless-stopped
+    logging: *logging
     environment:
       EDGE_ADAPTER_URL: http://emer-adapter:8000
+      # The OAuth issuer advertised in the MCP well-known metadata. The fallback
+      # must be a real URL, not empty: compose passes "" for an unset variable,
+      # pydantic-settings treats that as *set*, and AnyHttpUrl("") raises at
+      # import — the edge would not start.
+      EDGE_PUBLIC_URL: ${EDGE_PUBLIC_URL:-https://ai.emercoin.com}
       EDGE_ADAPTER_KEY: ${ADAPTER_INTERNAL_KEY:-}
       EDGE_REDIS_URL: redis://redis:6379/0
       EDGE_JWT_SECRET: ${EDGE_JWT_SECRET:-}
@@ -69,6 +89,7 @@ services:
     image: caddy:2
     container_name: emer-caddy
     restart: unless-stopped
+    logging: *logging
     ports:
       - "80:80"
       - "443:443"
@@ -77,4 +98,5 @@ services:
       - ../site:/srv/site:ro          # static corpus (index, login, css) — Caddy serves + CF caches
       - caddy_data:/data
       - caddy_config:/config
+      - caddy_logs:/var/log/caddy   # access logs, rolled by Caddy (see Caddyfile)
     depends_on: [edge]
