@@ -19,12 +19,17 @@ def _encode(value: Any) -> str:
     return json.dumps(value, separators=(",", ":"), ensure_ascii=False)
 
 
-async def name_exists(rpc: EmercoinRPC, name: str) -> bool:
-    """True if the name is already registered (confirmed in the name DB or sitting
-    unconfirmed in the mempool). Determines name_new vs name_update."""
+async def name_is_active(rpc: EmercoinRPC, name: str) -> bool:
+    """True if the name is registered AND still within its term (or sitting
+    unconfirmed in the mempool). Determines name_new vs name_update.
+
+    An expired name keeps showing up in name_show (with `expired: true`), but the
+    node refuses name_update on it — "name_update on an inactive name". Its term
+    is over, so the name is free to register again and only name_new works.
+    """
     try:
-        await show_record(rpc, name)
-        return True
+        if not (await show_record(rpc, name)).get("expired"):
+            return True
     except RPCError:
         pass
     return await find_in_mempool(rpc, name) is not None
@@ -33,10 +38,11 @@ async def name_exists(rpc: EmercoinRPC, name: str) -> bool:
 async def write_record(rpc: EmercoinRPC, name: str, value: Any, days: int) -> Any:
     """Register or update an NVS name (both single-step: name value days).
 
-    name_new fails on a name that already exists, so a re-registration (e.g. key
-    rotation: same name, new value) must go through name_update.
+    name_new fails on a name that is currently held, so a re-registration (e.g. key
+    rotation: same name, new value) must go through name_update. Once the term has
+    lapsed it is the other way round: only name_new can take the name back.
     """
-    method = "name_update" if await name_exists(rpc, name) else "name_new"
+    method = "name_update" if await name_is_active(rpc, name) else "name_new"
     return await rpc.call(method, name, _encode(value), days)
 
 
