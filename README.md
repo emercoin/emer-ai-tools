@@ -1,8 +1,8 @@
-![](https://github.com/steledger/steledger-gateway/blob/main/docs/docker.png)
+![](https://github.com/emercoin/emer-ai-tools/blob/main/docs/docker.png)
 [![Smithery](https://img.shields.io/badge/Smithery-Verified-green?style=flat-square&logo=github)](https://smithery.ai/servers/mechnotech/emer-ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-# Emercoin + AI agent tools (`steledger-gateway`)
+# Emercoin + AI agent tools (`emer-ai-tools`)
 
 A runnable Docker stack: an **Emercoin node** plus an **agent gateway** that turns
 the chain's Name-Value Storage (NVS) into an **on-chain identity & memory layer for
@@ -10,6 +10,13 @@ AI agents**. An agent can prove who it is and anchor what it has learned on a pu
 blockchain — **without holding any cryptocurrency**. Hosted at
 **[api.steledger.com](https://api.steledger.com)**; exposed to agents as the
 `emercoin-agent` MCP server.
+
+> **Where development continues.** This repository is the original and stays
+> with Emercoin, together with the Docker images of the node and the wallet. The
+> agent-facing gateway was split off on 2026-09-22 into
+> **[steledger/steledger-gateway](https://github.com/steledger/steledger-gateway)**,
+> which is what runs the hosted service at api.steledger.com and is where new
+> work lands. Nothing here is deployed any more.
 
 > **🤖 Building with an AI agent?** Read **[AGENTS.md](AGENTS.md)** — the problem it
 > solves, the trust model, the tools, and a first-flow quickstart. A ready-to-use
@@ -52,7 +59,7 @@ Tools: `node_status`, `read_record` (open) and `register_identity`, `store_memor
 
 Node (mainnet) + adapter + edge + redis, dev profile:
 ```bash
-git clone https://github.com/steledger/steledger-gateway && cd steledger-gateway
+git clone https://github.com/emercoin/emer-ai-tools && cd emer-ai-tools
 cp node/emercoin.conf.example node/emercoin.conf      # set rpcpassword
 docker compose -f deploy/docker-compose.yaml --profile dev up -d --build
 ```
