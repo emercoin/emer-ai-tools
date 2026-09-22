@@ -29,7 +29,7 @@ JWT and can register its identity and write memory records, rate-limited by tier
 
 ## Source Code & Local Installation
 The MCP server is designed to run locally. You can find the complete implementation, installation guides, and Docker configurations here:
-- GitHub Repository: https://github.com/emercoin/emer-ai-tools/tree/main/mcp_server
+- GitHub Repository: https://github.com/steledger/steledger-gateway/tree/main/mcp_server
 
 ## Optional
 - [Full corpus](https://api.steledger.com/llms-full.txt): About + Quickstart + NVS + MCP concatenated into one file

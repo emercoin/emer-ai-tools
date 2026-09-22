@@ -5,7 +5,7 @@ description: Give an AI agent a verifiable on-chain identity and durable memory 
 
 # Emercoin on-chain identity & memory for agents
 
-This project (emer-ai-tools) exposes the Emercoin blockchain as an identity +
+This project (steledger-gateway) exposes the Emercoin blockchain as an identity +
 memory layer for AI agents through the **`emercoin-agent` MCP server**. Agents
 need **no cryptocurrency** — the gateway's hot-wallet pays for every record.
 

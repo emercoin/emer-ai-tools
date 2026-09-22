@@ -5,7 +5,7 @@
   "description": "On-chain identity and durable memory for AI agents on the Emercoin blockchain (NVS).",
   "version": "0.2.0",
   "repository": {
-    "url": "https://github.com/emercoin/emer-ai-tools",
+    "url": "https://github.com/steledger/steledger-gateway",
     "source": "github",
     "subfolder": "mcp_server"
   },

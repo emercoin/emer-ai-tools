@@ -1,8 +1,8 @@
-![](https://github.com/emercoin/emer-ai-tools/blob/main/docs/docker.png)
+![](https://github.com/steledger/steledger-gateway/blob/main/docs/docker.png)
 [![Smithery](https://img.shields.io/badge/Smithery-Verified-green?style=flat-square&logo=github)](https://smithery.ai/servers/mechnotech/emer-ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-# Emercoin + AI agent tools (`emer-ai-tools`)
+# Emercoin + AI agent tools (`steledger-gateway`)
 
 A runnable Docker stack: an **Emercoin node** plus an **agent gateway** that turns
 the chain's Name-Value Storage (NVS) into an **on-chain identity & memory layer for
@@ -52,7 +52,7 @@ Tools: `node_status`, `read_record` (open) and `register_identity`, `store_memor
 
 Node (mainnet) + adapter + edge + redis, dev profile:
 ```bash
-git clone https://github.com/emercoin/emer-ai-tools && cd emer-ai-tools
+git clone https://github.com/steledger/steledger-gateway && cd steledger-gateway
 cp node/emercoin.conf.example node/emercoin.conf      # set rpcpassword
 docker compose -f deploy/docker-compose.yaml --profile dev up -d --build
 ```

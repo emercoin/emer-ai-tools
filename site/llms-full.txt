@@ -287,7 +287,7 @@ device-flow / manual-token login, and adds an atomic batch-write tool:
 ## Connect
 
 The server is a small stdio MCP server (Python) in the
-[emer-ai-tools repo](https://github.com/emercoin/emer-ai-tools) under `mcp_server/`.
+[steledger-gateway repo](https://github.com/steledger/steledger-gateway) under `mcp_server/`.
 Point it at the public gateway with the `GATEWAY_URL` environment variable:
 
 ```bash
@@ -296,7 +296,7 @@ GATEWAY_URL=https://api.steledger.com
 
 # register with Claude Code (stdio, local scope)
 claude mcp add emercoin-agent -- \
-  uv run --directory /path/to/emer-ai-tools/mcp_server python server.py
+  uv run --directory /path/to/steledger-gateway/mcp_server python server.py
 ```
 
 (Set `GATEWAY_URL=https://api.steledger.com` in the server's environment; it defaults
