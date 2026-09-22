@@ -14,6 +14,7 @@ output schemas and behaviour annotations. Shared clients via `configure()`.
 """
 from __future__ import annotations
 
+import inspect
 import json
 import logging
 from typing import Annotated, TypedDict
@@ -183,7 +184,26 @@ mcp = FastMCP(
     ),
 )
 
-@mcp.tool(
+
+def _tool(**kwargs):
+    """Register an MCP tool with a cleaned-up description.
+
+    `mcp.tool` takes the description straight from `__doc__`, source indentation
+    and all, and that text is what an agent reads to decide how to call the tool.
+    mcp ran docstrings through `cleandoc` up to 1.12; current 1.x does not, so do
+    it here — once, for every tool.
+    """
+    register = mcp.tool(**kwargs)
+
+    def decorate(fn):
+        if fn.__doc__:
+            fn.__doc__ = inspect.cleandoc(fn.__doc__)
+        return register(fn)
+
+    return decorate
+
+
+@_tool(
     title="Node status",
     annotations=ToolAnnotations(
         title="Node status", readOnlyHint=True, idempotentHint=True, openWorldHint=True
@@ -200,7 +220,7 @@ async def node_status(ctx: Context) -> NodeStatus:
     return await _adapter.status()  # type: ignore[return-value]
 
 
-@mcp.tool(
+@_tool(
     title="Read NVS record",
     annotations=ToolAnnotations(
         title="Read NVS record", readOnlyHint=True, idempotentHint=True, openWorldHint=True
@@ -231,7 +251,7 @@ async def read_record(
     return await _adapter.read(name)  # type: ignore[return-value]
 
 
-@mcp.tool(
+@_tool(
     title="Who am I",
     annotations=ToolAnnotations(
         title="Who am I", readOnlyHint=True, idempotentHint=True, openWorldHint=False
@@ -262,7 +282,7 @@ async def whoami(ctx: Context) -> WhoAmI:
     }
 
 
-@mcp.tool(
+@_tool(
     title="Register identity",
     annotations=ToolAnnotations(
         title="Register identity",
@@ -313,7 +333,7 @@ async def register_identity(
     return {"name": res["name"], "txid": res["result"]}
 
 
-@mcp.tool(
+@_tool(
     title="Store memory",
     annotations=ToolAnnotations(
         title="Store memory",

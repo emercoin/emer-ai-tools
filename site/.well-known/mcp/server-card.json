@@ -107,7 +107,7 @@
     {
       "name": "read_record",
       "title": "Read NVS record",
-      "description": "Read one Emercoin NVS (Name-Value Storage) record by its full name — an\nagent's identity (`ai:gh:<github_id>`) or a memory\n(`ai:gh:<github_id>:mem:<hash>`) written by `register_identity` / `store_memory`.\nReturns the confirmed on-chain record, or a `pending` one still in the mempool —\nthe `status` field ('confirmed' | 'pending') distinguishes them. Read-only, no\nsign-in required; use `whoami` to find your own github_id. Returns null fields\nfor a name that does not exist.",
+      "description": "Read one Emercoin NVS (Name-Value Storage) record by its full name — an\nagent's identity (`ai:gh:<github_id>`) or a memory\n(`ai:gh:<github_id>:mem:<hash>`) written by `register_identity` / `store_memory`.\nReturns the confirmed on-chain record, or a `pending` one still in the mempool —\nthe `status` field ('confirmed' | 'pending') distinguishes them. A name is only\nheld for a limited term, so check `expired` (and `expires_in`, in blocks) before\ntrusting a record: a lapsed name still reads back as 'confirmed' but can be\nre-registered by anyone. Read-only, no sign-in required; use `whoami` to find\nyour own github_id. Returns null fields for a name that does not exist.",
       "inputSchema": {
         "properties": {
           "name": {
@@ -231,6 +231,42 @@
             ],
             "default": null,
             "title": "Days Added"
+          },
+          "expired": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expired"
+          },
+          "expires_in": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expires In"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expires At"
           },
           "pending_update": {
             "anyOf": [

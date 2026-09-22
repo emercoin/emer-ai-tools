@@ -6,10 +6,10 @@ non-interactive clients (Glama, Smithery) read instead of opening a session. It
 must match what the running server actually advertises, so we generate it straight
 from `edge.app.mcp_app.mcp.list_tools()` rather than hand-editing JSON.
 
-Generate with `mcp>=1.12` (the edge runtime), which feeds docstrings through
-`cleandoc` — so the emitted descriptions carry no leading-whitespace noise. The
-gate checks below fail loudly if a regression (indent leak, missing output schema,
-tautological description) slips back in; this is the repo's stand-in for a test.
+Descriptions are normalized by `mcp_app._tool` at registration, not here, so the
+card is byte-for-byte what the server advertises. The gate checks below fail loudly
+if a regression (indent leak, missing output schema, tautological description)
+slips back in; this is the repo's stand-in for a test.
 
 Usage (from repo root, in a venv with edge/requirements.txt installed):
 
@@ -38,7 +38,7 @@ def _gate(tool) -> None:
     title = tool.title or ""
     assert desc, f"{tool.name}: empty description (TDQS 'No Description' gate)"
     assert "\n    " not in (tool.description or ""), (
-        f"{tool.name}: indent leak in description (regenerate with mcp>=1.12)"
+        f"{tool.name}: indent leak in description (mcp_app._tool should cleandoc it)"
     )
     assert desc.lower() not in {tool.name.lower(), title.lower()}, (
         f"{tool.name}: tautological description (equals name/title)"
