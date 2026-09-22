@@ -9,7 +9,7 @@
     "source": "github",
     "subfolder": "mcp_server"
   },
-  "websiteUrl": "https://ai.emercoin.com",
+  "websiteUrl": "https://api.steledger.com",
   "packages": [
     {
       "registryType": "oci",
@@ -19,7 +19,7 @@
         {
           "name": "GATEWAY_URL",
           "description": "Base URL of the edge gateway the MCP server talks to",
-          "default": "https://ai.emercoin.com"
+          "default": "https://api.steledger.com"
         }
       ]
     }
@@ -27,11 +27,11 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://ai.emercoin.com/mcp",
+      "url": "https://api.steledger.com/mcp",
       "headers": [
         {
           "name": "Authorization",
-          "description": "Bearer <session JWT> from https://ai.emercoin.com/login — required for write tools; read tools are open",
+          "description": "Bearer <session JWT> from https://api.steledger.com/login — required for write tools; read tools are open",
           "isRequired": false,
           "isSecret": true
         }

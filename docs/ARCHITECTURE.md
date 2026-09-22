@@ -121,7 +121,7 @@ image: emercoin/core:0.8.5      # the wallet/node
 image: emercoin/rest-api:0.0.1  # RPC↔REST in front of it
 ```
 
-## Deployment & CD (the public `ai.emercoin.com` box)
+## Deployment & CD (the public `api.steledger.com` box)
 The single droplet runs `deploy/docker-compose.droplet.yaml` (emc + adapter + edge
 + redis + caddy + watchtower). Delivery is **pull-based** — nothing reaches into
 the box; it pulls from the registry — which keeps the origin firewalled to
