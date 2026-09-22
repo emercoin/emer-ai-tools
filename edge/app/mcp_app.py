@@ -118,7 +118,9 @@ class NodeStatus(TypedDict, total=False):
 class NvsRecord(TypedDict, total=False):
     """An NVS record (confirmed from the name DB, or pending from the mempool).
     Fields are nullable: a pending record omits several, and the SDK serialises
-    absent fields as null."""
+    absent fields as null. `status` says whether the write landed; `expired` says
+    whether the name is still held — a lapsed record still reads back as
+    'confirmed'."""
     status: str | None
     name: str | None
     value: str | None
@@ -128,6 +130,9 @@ class NvsRecord(TypedDict, total=False):
     address_is_mine: str | None
     operation: str | None
     days_added: int | None
+    expired: bool | None
+    expires_in: int | None
+    expires_at: int | None
     pending_update: bool | None
     pending: dict | None
 
@@ -217,9 +222,11 @@ async def read_record(
     agent's identity (`ai:gh:<github_id>`) or a memory
     (`ai:gh:<github_id>:mem:<hash>`) written by `register_identity` / `store_memory`.
     Returns the confirmed on-chain record, or a `pending` one still in the mempool —
-    the `status` field ('confirmed' | 'pending') distinguishes them. Read-only, no
-    sign-in required; use `whoami` to find your own github_id. Returns null fields
-    for a name that does not exist."""
+    the `status` field ('confirmed' | 'pending') distinguishes them. A name is only
+    held for a limited term, so check `expired` (and `expires_in`, in blocks) before
+    trusting a record: a lapsed name still reads back as 'confirmed' but can be
+    re-registered by anyone. Read-only, no sign-in required; use `whoami` to find
+    your own github_id. Returns null fields for a name that does not exist."""
     await _record(ctx, "read_record", _principal_optional())
     return await _adapter.read(name)  # type: ignore[return-value]
 
