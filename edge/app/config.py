@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     adapter_key: str = ""
 
     # Public base URL — the OAuth issuer advertised in the MCP /.well-known metadata.
-    public_url: str = "https://ai.emercoin.com"
+    public_url: str = "https://api.steledger.com"
 
     # Auth: self-contained session JWT (no agent registry; we trust GitHub ID).
     # 7 days — long enough for a pasted token; OAuth clients also auto-refresh.

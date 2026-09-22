@@ -80,7 +80,9 @@ _AUTH_REQUIRED = {
         "Once the session carries a Bearer token, retry this call."
     ),
     "open_without_auth": ["node_status", "read_record", "whoami"],
-    "docs": "https://ai.emercoin.com/docs/mcp.md",
+    # Derived, not hard-coded: this URL is handed to agents, and a second copy of
+    # the hostname is a second thing to forget when the host moves.
+    "docs": f"{settings.public_url.rstrip('/')}/docs/mcp.md",
 }
 
 
