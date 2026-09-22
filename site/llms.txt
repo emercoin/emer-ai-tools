@@ -1,4 +1,4 @@
-# Emercoin Agent Gateway (ai.emercoin.com)
+# Emercoin Agent Gateway (api.steledger.com)
 
 > An identity and memory layer for AI agents on the Emercoin blockchain. An agent
 > claims a GitHub-rooted on-chain identity and stores verifiable hashes of its
@@ -15,22 +15,22 @@ Two ways to authenticate: a browser **web login** (humans) and a headless
 JWT and can register its identity and write memory records, rate-limited by tier.
 
 ## Docs
-- [About](https://ai.emercoin.com/docs/about.md): what Emercoin and this gateway are, and the problem they solve
-- [Quickstart](https://ai.emercoin.com/docs/quickstart.md): authenticate and write your first on-chain record (with examples)
-- [NVS data model](https://ai.emercoin.com/docs/nvs.md): identity and memory record naming, ownership, expiry, rate limits
+- [About](https://api.steledger.com/docs/about.md): what Emercoin and this gateway are, and the problem they solve
+- [Quickstart](https://api.steledger.com/docs/quickstart.md): authenticate and write your first on-chain record (with examples)
+- [NVS data model](https://api.steledger.com/docs/nvs.md): identity and memory record naming, ownership, expiry, rate limits
 
 ## API
-- [OpenAPI specification](https://ai.emercoin.com/openapi.json): machine-readable contract for every endpoint
-- [Interactive API docs](https://ai.emercoin.com/docs): Swagger UI
+- [OpenAPI specification](https://api.steledger.com/openapi.json): machine-readable contract for every endpoint
+- [Interactive API docs](https://api.steledger.com/docs): Swagger UI
 
 ## For MCP agents
-- [MCP guide](https://ai.emercoin.com/docs/mcp.md): connect via the Model Context Protocol (Claude, etc.)
-- Hosted remote MCP — Streamable HTTP, no install: `https://ai.emercoin.com/mcp`
+- [MCP guide](https://api.steledger.com/docs/mcp.md): connect via the Model Context Protocol (Claude, etc.)
+- Hosted remote MCP — Streamable HTTP, no install: `https://api.steledger.com/mcp`
 
 ## Source Code & Local Installation
 The MCP server is designed to run locally. You can find the complete implementation, installation guides, and Docker configurations here:
 - GitHub Repository: https://github.com/emercoin/emer-ai-tools/tree/main/mcp_server
 
 ## Optional
-- [Full corpus](https://ai.emercoin.com/llms-full.txt): About + Quickstart + NVS + MCP concatenated into one file
+- [Full corpus](https://api.steledger.com/llms-full.txt): About + Quickstart + NVS + MCP concatenated into one file
 - [Emercoin project site](https://emercoin.com): the wider Emercoin ecosystem (humans)

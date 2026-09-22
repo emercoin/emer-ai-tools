@@ -54,6 +54,6 @@ Writes are rate-limited per `github_id` with a sliding 60-second window. The
 **free tier** allows **10 NVS writes per minute**. Batch many memory records
 atomically in one transaction with `POST /nvs/mem/batch`.
 
-See the [Quickstart](https://ai.emercoin.com/docs/quickstart.md) for end-to-end
-examples and the [OpenAPI spec](https://ai.emercoin.com/openapi.json) for exact
+See the [Quickstart](https://api.steledger.com/docs/quickstart.md) for end-to-end
+examples and the [OpenAPI spec](https://api.steledger.com/openapi.json) for exact
 request/response schemas.

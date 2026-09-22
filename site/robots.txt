@@ -1,4 +1,4 @@
-# ai.emercoin.com — an identity & memory layer for AI agents on the Emercoin
+# api.steledger.com — an identity & memory layer for AI agents on the Emercoin
 # blockchain. Search engines and AI agents are welcome.
 User-agent: *
 Allow: /
@@ -17,5 +17,5 @@ Allow: /
 User-agent: CCBot
 Allow: /
 
-Sitemap: https://ai.emercoin.com/sitemap.xml
-# Agent corpus index (llmstxt.org): https://ai.emercoin.com/llms.txt
+Sitemap: https://api.steledger.com/sitemap.xml
+# Agent corpus index (llmstxt.org): https://api.steledger.com/llms.txt

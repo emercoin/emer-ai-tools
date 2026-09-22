@@ -8,7 +8,7 @@ the agent never has to craft raw HTTP requests.
 
 Connect directly to the **hosted** server over Streamable HTTP — nothing to install.
 
-- **URL:** `https://ai.emercoin.com/mcp`
+- **URL:** `https://api.steledger.com/mcp`
 
 ### Getting started
 1. **Add the server as a connector** — point your MCP client at the URL above and
@@ -24,14 +24,14 @@ Connect directly to the **hosted** server over Streamable HTTP — nothing to in
 {
   "mcpServers": {
     "emercoin-agent": {
-      "url": "https://ai.emercoin.com/mcp"
+      "url": "https://api.steledger.com/mcp"
     }
   }
 }
 ```
 
 2. **No OAuth in your client?** Fall back to a manual token: open
-   <https://ai.emercoin.com/login>, sign in with GitHub, copy the token shown, and
+   <https://api.steledger.com/login>, sign in with GitHub, copy the token shown, and
    put it in the `Authorization: Bearer <token>` header. It's the same session JWT
    the OAuth flow issues, so both paths are fully interchangeable — but a manual
    token is short-lived and isn't refreshed for you, so OAuth is the path to prefer
@@ -42,7 +42,7 @@ Connect directly to the **hosted** server over Streamable HTTP — nothing to in
 {
   "mcpServers": {
     "emercoin-agent": {
-      "url": "https://ai.emercoin.com/mcp",
+      "url": "https://api.steledger.com/mcp",
       "headers": { "Authorization": "Bearer <token from /login>" }
     }
   }
@@ -85,14 +85,14 @@ Point it at the public gateway with the `GATEWAY_URL` environment variable:
 
 ```bash
 # from a checkout of the repo
-GATEWAY_URL=https://ai.emercoin.com
+GATEWAY_URL=https://api.steledger.com
 
 # register with Claude Code (stdio, local scope)
 claude mcp add emercoin-agent -- \
   uv run --directory /path/to/emer-ai-tools/mcp_server python server.py
 ```
 
-(Set `GATEWAY_URL=https://ai.emercoin.com` in the server's environment; it defaults
+(Set `GATEWAY_URL=https://api.steledger.com` in the server's environment; it defaults
 to `http://localhost:8000` for local development.)
 
 ## Typical flow
@@ -112,5 +112,5 @@ to `http://localhost:8000` for local development.)
 5. `read_record` — verify what's on-chain.
 
 Prefer raw HTTP? Everything above is also available directly — see the
-[Quickstart](https://ai.emercoin.com/docs/quickstart.md) and the
-[OpenAPI spec](https://ai.emercoin.com/openapi.json).
+[Quickstart](https://api.steledger.com/docs/quickstart.md) and the
+[OpenAPI spec](https://api.steledger.com/openapi.json).

@@ -8,7 +8,7 @@ A runnable Docker stack: an **Emercoin node** plus an **agent gateway** that tur
 the chain's Name-Value Storage (NVS) into an **on-chain identity & memory layer for
 AI agents**. An agent can prove who it is and anchor what it has learned on a public
 blockchain — **without holding any cryptocurrency**. Hosted at
-**[ai.emercoin.com](https://ai.emercoin.com)**; exposed to agents as the
+**[api.steledger.com](https://api.steledger.com)**; exposed to agents as the
 `emercoin-agent` MCP server.
 
 > **🤖 Building with an AI agent?** Read **[AGENTS.md](AGENTS.md)** — the problem it
@@ -34,13 +34,13 @@ application built on top of that node. You can run the **whole stack**, use the
 | **adapter** (`emer-adapter`) | `adapter/` | RPC↔REST: a plain REST surface over the node's JSON-RPC. Internal, gated by `X-Internal-Key`. |
 | **edge** (`emer-edge`) | `edge/` | The trust boundary: authenticates agents (GitHub → JWT / signature login), rate-limits writes, builds NVS records, mounts the `emercoin-agent` MCP at `/mcp`. |
 | **mcp_server** | `mcp_server/` | A thin stdio MCP client of the edge, distributed via Docker / Smithery for local use. |
-| **site** | `site/` | The public `ai.emercoin.com` front-end (landing, login, stats). |
+| **site** | `site/` | The public `api.steledger.com` front-end (landing, login, stats). |
 
 ## Use it as an agent (hosted)
 
 The `emercoin-agent` MCP server is live — no self-hosting needed:
 
-- **Streamable HTTP:** `https://ai.emercoin.com/mcp` (read tools open; write tools need
+- **Streamable HTTP:** `https://api.steledger.com/mcp` (read tools open; write tools need
   a GitHub sign-in via OAuth, performed by your MCP client).
 - **Smithery / stdio Docker image:** see the [Smithery listing](https://smithery.ai/servers/mechnotech/emer-ai)
   and `mcp_server/README.md`.
