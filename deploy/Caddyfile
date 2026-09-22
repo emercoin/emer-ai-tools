@@ -1,4 +1,7 @@
-# Front for ai.emercoin.com behind Cloudflare (proxied).
+# Front for the agent gateway behind Cloudflare (proxied), on two hostnames:
+# api.steledger.com is canonical, ai.emercoin.com is the legacy host kept for a
+# transition period. Same app on both; separate access logs so the traffic moving
+# from one to the other is visible.
 #  - Any file that exists under ../site (index, login, css, /docs/*.md, llms.txt,
 #    robots.txt, sitemap.xml, …) is served directly and is Cloudflare-cacheable;
 #    extensionless paths resolve via try_files (/login -> login.html).
@@ -46,6 +49,21 @@
 	}
 }
 
+# The canonical host. Note the edge advertises exactly one OAuth issuer
+# (EDGE_PUBLIC_URL), so only one of these two hostnames is a working MCP sign-in
+# target at a time — see MIGRATION.md phase 2.
+http://api.steledger.com {
+	import accesslog api
+	import app
+}
+
+api.steledger.com {
+	tls internal
+	import accesslog api
+	import app
+}
+
+# Legacy host. Reads and REST keep working here during the transition.
 http://ai.emercoin.com {
 	import accesslog ai
 	import app
