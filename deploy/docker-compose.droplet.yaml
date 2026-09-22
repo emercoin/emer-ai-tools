@@ -74,7 +74,7 @@ services:
       # must be a real URL, not empty: compose passes "" for an unset variable,
       # pydantic-settings treats that as *set*, and AnyHttpUrl("") raises at
       # import — the edge would not start.
-      EDGE_PUBLIC_URL: ${EDGE_PUBLIC_URL:-https://ai.emercoin.com}
+      EDGE_PUBLIC_URL: ${EDGE_PUBLIC_URL:-https://api.steledger.com}
       EDGE_ADAPTER_KEY: ${ADAPTER_INTERNAL_KEY:-}
       EDGE_REDIS_URL: redis://redis:6379/0
       EDGE_JWT_SECRET: ${EDGE_JWT_SECRET:-}
