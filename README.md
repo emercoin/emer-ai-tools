@@ -11,8 +11,12 @@ blockchain — **without holding any cryptocurrency**. Hosted at
 **[api.steledger.com](https://api.steledger.com)**; exposed to agents as the
 `emercoin-agent` MCP server.
 
-> **Where development continues.** This repository is the original and stays
-> with Emercoin, together with the Docker images of the node and the wallet. The
+> **Archived.** The `emercoin/core` Docker image (node + wallet) is now built and
+> published by the release CI of
+> **[emercoin/emercoin](https://github.com/emercoin/emercoin)** itself, so nothing
+> is built here any more.
+>
+> **Where development continues.** This repository is the original. The
 > agent-facing gateway was split off on 2026-09-22 into
 > **[steledger/steledger-gateway](https://github.com/steledger/steledger-gateway)**,
 > which is what runs the hosted service at api.steledger.com and is where new
