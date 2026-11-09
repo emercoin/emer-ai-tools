@@ -99,7 +99,7 @@ touches their source dir (path-filtered), so small fixes ship without a tag.
 | `emercoin/rest-api` | `adapter/` | `publish-rest-api.yml` | `rest-api-v*` (e.g. `rest-api-v0.0.1`) | amd64+arm64 |
 | `emercoin/edge` | `edge/` | `publish-edge.yml` | `edge-v*` (e.g. `edge-v0.0.1`) | amd64+arm64 |
 | `emercoin/mcp` | `mcp_server/` | `publish-mcp.yml` | `mcp-v*` (e.g. `mcp-v0.1.0`) | amd64+arm64 |
-| `emercoin/core` | `node/` | `publish-node.yml` | `node-v*` (e.g. `node-v0.8.5`) | amd64 |
+| `emercoin/core` | `node/` | `publish-node.yml` | `node-v*` (e.g. `node-v0.8.6`) | amd64+arm64 |
 
 `emercoin/mcp` is the stdio MCP server (referenced by `mcp_server/server.json` in
 the official MCP registry; agents run it via `docker run -i`).
@@ -110,7 +110,9 @@ the official MCP registry; agents run it via `docker run -i`).
   (and auto-updates via Watchtower) rather than building on the box.
 - **`emercoin/core`** — the wallet/node itself; `node-v*` publishes
   `emercoin/core:<EMER_DISTR_VERSION>` + `latest` (the tag is read from
-  `node/Dockerfile`). amd64 only (the emercoind tarball is x86_64). A manual
+  `node/Dockerfile`). The Dockerfile builds linux/amd64 and linux/arm64 (since
+  0.8.6 the release ships an aarch64 tarball) and verifies the tarball against the
+  release's `SHA256SUMS`, itself pinned by hash. A manual
   `workflow_dispatch` publishes only a `<ver>-test` tag for verification — it
   never overwrites `:latest`. **A `node-v*` release overwrites the official
   image; verify the `-test` build first.**

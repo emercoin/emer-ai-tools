@@ -1,14 +1,16 @@
 # Publish the Emercoin wallet/node image (emercoin/core) built from node/.
 #
 # Tag convention (keeps this disjoint from the REST-API pipeline, which uses v*):
-#   - push a tag `node-v*` (e.g. node-v0.8.5)  -> publishes emercoin/core:<ver> + latest
+#   - push a tag `node-v*` (e.g. node-v0.8.6)  -> publishes emercoin/core:<ver> + latest
 #   - manual run (workflow_dispatch)           -> publishes emercoin/core:<ver>-test only
 #                                                 (a safe dry-run; never touches :latest)
 #
 # The Docker tag <ver> is read from EMER_DISTR_VERSION in node/Dockerfile, so the
 # image tag always matches the emercoind release actually built.
 #
-# amd64 only: node/Dockerfile downloads the x86_64 emercoind tarball.
+# amd64 + arm64: node/Dockerfile picks the x86_64 or aarch64 tarball by TARGETARCH.
+# No QEMU needed: download/extract run on the build platform and the runtime
+# stage only copies files.
 # Requires repo secrets DOCKERHUB_USERNAME + DOCKERHUB_TOKEN (write to emercoin org).
 #
 # WARNING: this publishes the OFFICIAL emercoin/core image. A `node-v*` release
@@ -56,7 +58,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./node
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
